@@ -151,7 +151,7 @@ void middle_handle(const char *buf_recv, char *buf, int len){
     else if (0==strncmp(buf_recv, "login", 5))      login(buf_recv, buf, len);
     else if (0==strncmp(buf_recv, "pay", 3))        pay(buf_recv, buf, len);
     else if (0==strncmp(buf_recv, "refund", 6))     refund(buf_recv, buf, len);
-    else if (0==strncmp(buf_recv, "list", 4))     refund(buf_recv, buf, len);
+    else if (0==strncmp(buf_recv, "list", 4))       list(buf_recv, buf, len);
     else
     {
         const char *s = "error:100,note:echo command if unknow ";
@@ -253,7 +253,7 @@ void login(const char *recv, char *buf, int len){
     query(mysql_handler, sql);
     exitdb(mysql_handler);
 
-    snprintf(buf, MAXLINE, "error:0,note:%s", token);
+    snprintf(buf, MAXLINE, "error:0,note:%d|%s", id, token);
 }
 /* 命令：pay deal_id buyer_id seller_id amount 返回 */
 /* 影响表：
@@ -267,7 +267,7 @@ void pay(const char *recv, char *buf, int len){
     int deal_id, buyer_id, seller_id;
     char sql[MAXLINE] = "\0", token[32]="\0", password_pay[32]="\0";
     sscanf(recv, "pay|%d|%d|%d|%lld|%[^|]|%[^\n]", &deal_id, &buyer_id, &seller_id, &amount, token, password_pay);
-    if (!check_token_with_id(mysql_handler, 1, buyer_id, token)){
+    if (!check_token_with_id(mysql_handler, BUYER, buyer_id, token)){
         snprintf(buf, MAXLINE, "error:1,note:token error");
         return;
     }
@@ -309,7 +309,7 @@ void refund(const char *recv, char *buf, int len){
     int deal_id, buyer_id, seller_id;
     char sql[MAXLINE] = "\0", token[32]="\0";
     sscanf(recv, "refund|%d|%d|%d|%lld|%s", &deal_id, &buyer_id, &seller_id, &amount, token);
-    if (!check_token_with_id(mysql_handler, 0, seller_id, token)){
+    if (!check_token_with_id(mysql_handler, SELLER, seller_id, token)){
         snprintf(buf, MAXLINE, "error:1,note:token error");
         return;
     }
@@ -409,4 +409,56 @@ void release_after_select(MYSQL* mysql_handler, MYSQL_RES *result){
 
 /* 命令：list type name token */
 void list(const char *recv, char *buf, int len){
+    MYSQL* mysql_handler = connectdb();
+    char name[32], token[32], sql[MAXLINE];
+    int type, id;
+    sscanf(recv, "list|%d|%d|%s", &type, &id, token);
+    if (!check_token_with_id(mysql_handler, type, id, token)){
+        snprintf(buf, len, "error:1,note:token error");
+        return;
+    }
+
+
+    const char* other;
+    if (type==BUYER) {
+        snprintf(sql, MAXLINE, "select a.id, b.name, a.amount, a.refund, a.create_time, a.status from txproj_deal as a, txproj_buyer as b where a.buyer_id=b.id and b.id=%d", id);
+        other = "seller";
+    } else if (type==SELLER) {
+        snprintf(sql, MAXLINE, "select a.id, b.name, a.amount, a.refund, a.create_time, a.status from txproj_deal as a, txproj_seller as b where a.seller_id=b.id and b.id=%d", id);
+        other = "buyer";
+    } else {
+        snprintf(buf, MAXLINE, "error:8,note:type error");
+        return;
+    }
+    
+    printf("%s\n", sql);
+    int size = query(mysql_handler, sql);
+    MYSQL_RES *result = mysql_use_result(mysql_handler);
+    unsigned i,ncol = mysql_field_count(mysql_handler);   /* 列数 */
+
+    char data[MAXLINE] = "\0",
+         line[MAXLINE] = "\0";
+    int left = sizeof(data);
+
+
+    /* 表 */
+    MYSQL_ROW *row = (MYSQL_ROW*)mysql_fetch_row(result);
+    if (row)
+        printf("%s,%s\n", (const char*)row[0], token); 
+    while (row){                                        /* 不停读行 */
+        snprintf(line, MAXLINE, 
+                "{\"id\":%s, \"%s\":%s, \"amount\":%s, \"refound\":%s, \"create_time\":%s, \"status\":%s}",
+                (const char*)row[0], other, (const char*)row[1],
+                (const char*)row[2],(const char*)row[3],(const char*)row[4],(const char*)row[5]);
+        if (strlen(line) >= left)                 /* 缓冲区已满 */
+            break;
+        strncat(data, line, left); 
+        left -= strlen(line);
+        strncat(data, ",", 1);
+        row = (MYSQL_ROW*)mysql_fetch_row(result);
+    }
+    data[strlen(data)-1] = '\0';
+
+    snprintf(buf, len, "{\"error\":0,\"type\":%d, \"len\":%d, \"data\":[%s]}", type, size, data);
+    exitdb(mysql_handler);
 }

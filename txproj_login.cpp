@@ -81,20 +81,22 @@ int main(int argc, char *argv[])
             cmd = "login|" + type->getValue() + '|' + name->getValue() + '|' + password->getValue();
             send_reci(cmd.c_str(), cmd.size()+10, buf_recv, MAXLINE);
             int err = -1;
-            char note[32] = "\0";
-            sscanf(buf_recv, "error:%d,note:%s", &err, note);
+            char note[32] = "\0", strid[32]="\0";
+            sscanf(buf_recv, "error:%d,note:%[^|]|%s", &err, strid, note);
             if (err==0){    // 登录后重定向
                 if (type->getValue() == "2") {
                     cout << HTTPRedirectHeader("/txproj_buyer.html", 1)
                         // .setCookie(HTTPCookie("name", name, "", "localhost", 0, "/", false))
                         .setCookie(HTTPCookie("name", name->getValue()))
                         .setCookie(HTTPCookie("token",note))
+                        .setCookie(HTTPCookie("id",strid))
                         .setCookie(HTTPCookie("type",type->getValue()));
                     return 0;
                 } else if (type->getValue() == "1") {
                     cout << HTTPRedirectHeader("/txproj_seller.html", 1)
                         .setCookie(HTTPCookie("name", name->getValue()))
                         .setCookie(HTTPCookie("token",note))
+                        .setCookie(HTTPCookie("id",strid))
                         .setCookie(HTTPCookie("type",type->getValue()));
                     return 0;
                 }
