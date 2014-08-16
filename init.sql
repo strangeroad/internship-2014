@@ -10,7 +10,7 @@ drop table if exists txproj_refund;
 
 create table if not exists txproj_buyer (
     id          int auto_increment not null,
-    name        varchar(32) not null,
+    name        varchar(32) unique not null,
     password    varchar(32) not null,
     password_pay varchar(32) not null,
     card        varchar(32) not null,
@@ -22,7 +22,7 @@ create table if not exists txproj_buyer (
 
 create table if not exists txproj_seller (
     id          int auto_increment not null,
-    name        varchar(32) not null,
+    name        varchar(32) unique not null,
     password    varchar(32) not null,
     card        varchar(32) not null,
     balance     bigint not null,

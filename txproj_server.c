@@ -25,6 +25,8 @@
 #include <string.h>
 #include <mysql/mysql.h>
 #include <time.h>
+#include <unistd.h> // fork, close
+#include <arpa/inet.h>  // inet_ntoa
 
 #define MAXLINE 4096
 enum person_type
@@ -55,8 +57,11 @@ void login(const char *recv, char *buf, int len);
 void pay(const char *recv, char *buf, int len);
 /* 命令：refund dealid buyer seller amount */
 void refund(const char *recv, char *buf, int len);
+/* 命令：list type name token */
+void list(const char *recv, char *buf, int len);
 
 int check_token_with_id(MYSQL* mysql_handler, int type, int id, char *token);
+int check_token_with_name(MYSQL* mysql_handler, int type, char *name, char *token);
 
 /* 释放当前查询的所有结果集. 否则下次查询将会出错. */
 void release_after_select(MYSQL* mysql_handler, MYSQL_RES *result);
@@ -142,10 +147,11 @@ int err_handle(const char* str){
 
 
 void middle_handle(const char *buf_recv, char *buf, int len){
-    if      (0==strncmp(buf_recv, "token", 4))      token(buf_recv, buf, len);
+    if      (0==strncmp(buf_recv, "token", 5))      token(buf_recv, buf, len);
     else if (0==strncmp(buf_recv, "login", 5))      login(buf_recv, buf, len);
     else if (0==strncmp(buf_recv, "pay", 3))        pay(buf_recv, buf, len);
     else if (0==strncmp(buf_recv, "refund", 6))     refund(buf_recv, buf, len);
+    else if (0==strncmp(buf_recv, "list", 4))     refund(buf_recv, buf, len);
     else
     {
         const char *s = "error:100,note:echo command if unknow ";
@@ -193,23 +199,10 @@ void token(const char *recv, char *buf, int len){
     char name[32], token[32], sql[MAXLINE];
     int type;
     sscanf(recv, "token|%d|%[^|]|%[^\n]", &type, name, token);
-    if (type==BUYER)
-        snprintf(sql, MAXLINE, "select token from txproj_buyer where name='%s'", name);
-    else if (type==SELLER)
-        snprintf(sql, MAXLINE, "select token from txproj_seller where name='%s'", name);
-    else {
-        snprintf(buf, MAXLINE, "error:8,note:type error");
-        return;
-    }
-    query(mysql_handler, sql);
-    MYSQL_RES *result = mysql_use_result(mysql_handler);
-    if (!result)
-        err_handle("mysql result null");
-    MYSQL_ROW *row = (MYSQL_ROW *)mysql_fetch_row(result);
-    if (row && 0==strcmp((const char*)row[0], token))
-        snprintf(buf, MAXLINE, "error:0,note:true");
+    if (check_token_with_name(mysql_handler, type, name, token))
+        snprintf(buf, len, "error:0,note:true");
     else 
-        snprintf(buf, MAXLINE, "error:1,note:token error");
+        snprintf(buf, len, "error:1,note:token error");
     exitdb(mysql_handler);
 }
 /* 命令：login type name password 返回 */
@@ -217,7 +210,7 @@ void token(const char *recv, char *buf, int len){
  * txproj_buyer | txproj_seller : select & update
  */
 void login(const char *recv, char *buf, int len){
-    /* 绝不明文保密，CSDN为鉴 */
+    /* 实际中绝不明文保存密码，CSDN为鉴 */
     MYSQL* mysql_handler = connectdb();
     char name[32], password[32]="\0", sql[MAXLINE], token[32];
     int type;
@@ -382,6 +375,27 @@ int check_token_with_id(MYSQL* mysql_handler, int type, int id, char *token){
     return ret;
 }
 
+int check_token_with_name(MYSQL* mysql_handler, int type, char *name, char *token){
+    char sql[MAXLINE]="\0";
+    if (type==BUYER)
+        snprintf(sql, MAXLINE, "select token from txproj_buyer where name='%s'", name);
+    else if (type==SELLER)
+        snprintf(sql, MAXLINE, "select token from txproj_seller where name='%s'", name);
+    else {
+        return 0;
+    }
+    query(mysql_handler, sql);
+    MYSQL_RES *result = mysql_use_result(mysql_handler);
+    if (!result)
+        err_handle("mysql result null");
+    MYSQL_ROW *row = (MYSQL_ROW *)mysql_fetch_row(result);
+    int ret = (int)(row && 0==strcmp((const char*)row[0], token));
+
+    release_after_select(mysql_handler, result);
+
+    return ret;
+}
+
 void release_after_select(MYSQL* mysql_handler, MYSQL_RES *result){
     mysql_free_result(result);
     /* 释放当前查询的所有结果集. 否则下次查询将会出错. */
@@ -390,4 +404,9 @@ void release_after_select(MYSQL* mysql_handler, MYSQL_RES *result){
         result = mysql_store_result(mysql_handler);
         mysql_free_result(result);
     }
+}
+
+
+/* 命令：list type name token */
+void list(const char *recv, char *buf, int len){
 }
