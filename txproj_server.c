@@ -23,7 +23,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <mysql.h>
+#include <mysql/mysql.h>
 #include <time.h>
 
 #define MAXLINE 4096
