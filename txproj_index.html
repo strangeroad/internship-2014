@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登录</title>
+
+    <!-- Bootstrap -->
+    <link href="bootstrap-3.2.0-dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="http://cdn.bootcss.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="http://cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+  <div class="container">
+    <div class="row">
+        <div class="col-md-4 col-md-offset-4">
+            <h1>模拟登录平台</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 col-md-offset-4">
+            <form role="form" action="/cgi-bin/txproj_login" method="POST">
+                <div class="form-group">
+                    <label for="name">帐号：</label>
+                    <input type="text" class="form-control" id="name" placeholder="帐号">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码：</label>
+                    <input type="password" class="form-control" id="password" placeholder="密码">
+                </div>
+                <label class="radio-inline">
+                    <input type="radio" name="type" id="type0" value="0"> 卖家
+                </label>
+                <label class="radio-inline">
+                    <input type="radio" name="type" id="type1" value="1" checked=true> 买家
+                </label>
+                <button type="submit" class="btn btn-success">登录</button>
+            </form>
+        </div>
+    </div>
+  </div>
+
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="bootstrap-3.2.0-dist/js/jquery-1.11.1.min.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <script src="bootstrap-3.2.0-dist/js/bootstrap.min.js"></script>
+  </body>
+</html>
