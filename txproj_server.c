@@ -27,6 +27,12 @@
 #include <time.h>
 
 #define MAXLINE 4096
+enum person_type
+{
+    SELLER  = 1,
+    BUYER   = 2
+};
+
 
 int err_handle(const char* str);
 
@@ -187,10 +193,14 @@ void token(const char *recv, char *buf, int len){
     char name[32], token[32], sql[MAXLINE];
     int type;
     sscanf(recv, "token|%d|%[^|]|%[^\n]", &type, name, token);
-    if (type==1)
+    if (type==BUYER)
         snprintf(sql, MAXLINE, "select token from txproj_buyer where name='%s'", name);
-    else
+    else if (type==SELLER)
         snprintf(sql, MAXLINE, "select token from txproj_seller where name='%s'", name);
+    else {
+        snprintf(buf, MAXLINE, "error:8,note:type error");
+        return;
+    }
     query(mysql_handler, sql);
     MYSQL_RES *result = mysql_use_result(mysql_handler);
     if (!result)
@@ -212,10 +222,14 @@ void login(const char *recv, char *buf, int len){
     char name[32], password[32]="\0", sql[MAXLINE], token[32];
     int type;
     sscanf(recv, "login|%d|%[^|]|%[^\n]", &type, name, password);
-    if (type == 1)
+    if (type==BUYER)
         snprintf(sql, MAXLINE, "select id from txproj_buyer where name='%s' and password='%s'", name, password);
-    else
+    else if (type==SELLER)
         snprintf(sql, MAXLINE, "select id from txproj_seller where name='%s' and password='%s'", name, password);
+    else {
+        snprintf(buf, MAXLINE, "error:8,note:type error");
+        return;
+    }
     query(mysql_handler, sql);
     MYSQL_RES *result = mysql_use_result(mysql_handler);
     MYSQL_ROW *row = (MYSQL_ROW *)mysql_fetch_row(result);
@@ -223,25 +237,30 @@ void login(const char *recv, char *buf, int len){
         snprintf(buf, MAXLINE, "error:2,note:name or password wrong");
         return;
     }
+
     /* 生成token */
     srand(time(0));
-    char strn[32]; snprintf(strn, 32, "%032d", rand());
-    int i;
-    for (i=0;i<31;i++)  
-        token[i] = (strn[i] | password[i]) & 0x7f;
+    snprintf(token, 32, "%d", rand());
+    strncat(token, password, 32-strlen(token));
     token[31] = '\0';
-    snprintf(buf, MAXLINE, "error:0,note:%s", token);
+
     int id=0;
     sscanf((const char*)row[0], "%d", &id);
 
     release_after_select(mysql_handler, result);
 
-    if (type == 1)
+    if (type==BUYER)
         snprintf(sql, MAXLINE, "update txproj_buyer set token='%s' where id=%d", token, id);
-    else
+    else if (type==SELLER)
         snprintf(sql, MAXLINE, "update txproj_seller set token='%s' where id=%d", token, id);
+    else {
+        snprintf(buf, MAXLINE, "error:8,note:type error");
+        return;
+    }
     query(mysql_handler, sql);
     exitdb(mysql_handler);
+
+    snprintf(buf, MAXLINE, "error:0,note:%s", token);
 }
 /* 命令：pay deal_id buyer_id seller_id amount 返回 */
 /* 影响表：
@@ -344,10 +363,13 @@ void refund(const char *recv, char *buf, int len){
 
 int check_token_with_id(MYSQL* mysql_handler, int type, int id, char *token){
     char sql[MAXLINE]="\0";
-    if (type==1)
+    if (type==BUYER)
         snprintf(sql, MAXLINE, "select token from txproj_buyer where id=%d", id);
-    else
+    else if (type==SELLER)
         snprintf(sql, MAXLINE, "select token from txproj_seller where id=%d", id);
+    else {
+        return 0;
+    }
     query(mysql_handler, sql);
     MYSQL_RES *result = mysql_use_result(mysql_handler);
     if (!result)

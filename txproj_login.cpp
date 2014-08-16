@@ -84,14 +84,14 @@ int main(int argc, char *argv[])
             char note[32] = "\0";
             sscanf(buf_recv, "error:%d,note:%s", &err, note);
             if (err==0){    // 登录后重定向
-                if (type->getValue() == "1") {
+                if (type->getValue() == "2") {
                     cout << HTTPRedirectHeader("/txproj_buyer.html", 1)
                         // .setCookie(HTTPCookie("name", name, "", "localhost", 0, "/", false))
                         .setCookie(HTTPCookie("name", name->getValue()))
                         .setCookie(HTTPCookie("token",note))
                         .setCookie(HTTPCookie("type",type->getValue()));
                     return 0;
-                } else if (type->getValue() == "0") {
+                } else if (type->getValue() == "1") {
                     cout << HTTPRedirectHeader("/txproj_seller.html", 1)
                         .setCookie(HTTPCookie("name", name->getValue()))
                         .setCookie(HTTPCookie("token",note))
@@ -104,10 +104,10 @@ int main(int argc, char *argv[])
         /* 查cookie是否已登录 */
         if (type==end && name==end && password==end && if_login(cgi)){
             string _type = getCookie(cgi, "type");
-            if (_type == "1"){
+            if (_type == "2"){
                 cout << HTTPRedirectHeader("/txproj_buyer.html", 1);
                 return 0;
-            } else if (_type == "0") {
+            } else if (_type == "1") {
                 cout << HTTPRedirectHeader("/txproj_seller.html", 1);
                 return 0;
             }
