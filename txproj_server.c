@@ -55,8 +55,10 @@ void token(const char *recv, char *buf, int len);
 void login(const char *recv, char *buf, int len);
 /* 命令：pay deal_id buyer_id seller_id amount 返回 */
 void pay(const char *recv, char *buf, int len);
+void pay2(const char *recv, char *buf, int len);
 /* 命令：refund dealid buyer seller amount */
 void refund(const char *recv, char *buf, int len);
+void refund2(const char *recv, char *buf, int len);
 /* 命令：list type name token */
 void list(const char *recv, char *buf, int len);
 
@@ -149,8 +151,8 @@ int err_handle(const char* str){
 void middle_handle(const char *buf_recv, char *buf, int len){
     if      (0==strncmp(buf_recv, "token", 5))      token(buf_recv, buf, len);
     else if (0==strncmp(buf_recv, "login", 5))      login(buf_recv, buf, len);
-    else if (0==strncmp(buf_recv, "pay", 3))        pay(buf_recv, buf, len);
-    else if (0==strncmp(buf_recv, "refund", 6))     refund(buf_recv, buf, len);
+    else if (0==strncmp(buf_recv, "pay", 3))        pay2(buf_recv, buf, len);
+    else if (0==strncmp(buf_recv, "refund", 6))     refund2(buf_recv, buf, len);
     else if (0==strncmp(buf_recv, "list", 4))       list(buf_recv, buf, len);
     else
     {
@@ -255,7 +257,7 @@ void login(const char *recv, char *buf, int len){
 
     snprintf(buf, MAXLINE, "error:0,note:%d|%s", id, token);
 }
-/* 命令：pay deal_id buyer_id seller_id amount 返回 */
+/* 命令：pay deal_id buyer_id seller_id amount token password_pay返回 */
 /* 影响表：
  * txproj_deal : select
  * txproj_pay  : insert
@@ -282,6 +284,52 @@ void pay(const char *recv, char *buf, int len){
     }
     int status=0;
     sscanf((const char*)row[0], "%d", &status);
+    if (status>1){
+        snprintf(buf, MAXLINE, "error:4,note: has been paid");
+        return;
+    }
+    
+    release_after_select(mysql_handler, result);
+
+    snprintf(sql, MAXLINE, "insert into txproj_pay (deal_id, buyer_id, seller_id, amount, pay_time) values \
+            (%d, %d, %d, %lld, now());", deal_id, buyer_id, seller_id, amount);
+    query(mysql_handler, sql);
+    snprintf(sql, MAXLINE, "update txproj_deal set status=2 where id=%d", deal_id);
+    query(mysql_handler, sql);
+    snprintf(buf, MAXLINE, "error:0,note:%lld", amount);
+    exitdb(mysql_handler);
+}
+/* 命令：pay deal_id password_pay buyer_id token返回 */
+/* 影响表：
+ * txproj_deal : select
+ * txproj_pay  : insert
+ * txproj_deal : update
+ */
+void pay2(const char *recv, char *buf, int len){
+    MYSQL* mysql_handler = connectdb();
+    long long amount;
+    int deal_id, buyer_id, seller_id;
+    char sql[MAXLINE] = "\0", token[32]="\0", password_pay[32]="\0";
+    sscanf(recv, "pay|%d|%[^|]|%d|%[^|]", &deal_id, password_pay, &buyer_id, token);
+    printf("pay|%d|%s|%d|%s\n", deal_id, password_pay, buyer_id, token);
+    if (!check_token_with_id(mysql_handler, BUYER, buyer_id, token)){
+        snprintf(buf, MAXLINE, "error:1,note:token error");
+        return;
+    }
+    snprintf(sql, MAXLINE, "select seller_id, amount, status from txproj_deal where id=%d and buyer_id=%d",
+            deal_id, buyer_id);
+    query(mysql_handler, sql);
+    MYSQL_RES *result = mysql_use_result(mysql_handler);
+    MYSQL_ROW *row = (MYSQL_ROW *)mysql_fetch_row(result);
+    if (!row){
+        snprintf(buf, MAXLINE, "error:3,note: no such deal, maybe arguments wrong");
+        return;
+    }
+    int status=0;
+    sscanf((const char*)row[0], "%d", &seller_id);
+    sscanf((const char*)row[1], "%lld", &amount);
+    sscanf((const char*)row[2], "%d", &status);
+    /* 有空也换成enum */
     if (status>1){
         snprintf(buf, MAXLINE, "error:4,note: has been paid");
         return;
@@ -352,6 +400,64 @@ void refund(const char *recv, char *buf, int len){
     snprintf(buf, MAXLINE, "error:0,note:%lld", amount);
     exitdb(mysql_handler);
 }
+
+
+/* 命令：refund dealid amount seller_id token */
+/* 影响表：
+ * txproj_deal      : select
+ * txproj_refund    : insert
+ * txproj_deal      : update
+ */
+void refund2(const char *recv, char *buf, int len){
+    MYSQL* mysql_handler = connectdb();
+    long long amount;
+    int deal_id, buyer_id, seller_id;
+    char sql[MAXLINE] = "\0", token[32]="\0";
+    sscanf(recv, "refund|%d|%lld|%d|%s", &deal_id, &amount, &seller_id, token);
+    if (!check_token_with_id(mysql_handler, SELLER, seller_id, token)){
+        snprintf(buf, MAXLINE, "error:1,note:token error");
+        return;
+    }
+    snprintf(sql, MAXLINE, "select buyer_id, amount, refund, status from txproj_deal where id=%d and seller_id=%d", deal_id, seller_id);
+    query(mysql_handler, sql);
+    MYSQL_RES *result = mysql_use_result(mysql_handler);
+    MYSQL_ROW *row = (MYSQL_ROW *)mysql_fetch_row(result);
+    if (!row){
+        snprintf(buf, MAXLINE, "error:3,note: no such deal, maybe arguments wrong");
+        return;
+    }
+    int status=0;
+    long long pay=0, refund=0;
+    sscanf((const char*)row[0], "%d", &buyer_id);
+    sscanf((const char*)row[1], "%lld", &pay);
+    sscanf((const char*)row[2], "%lld", &refund);
+    sscanf((const char*)row[3], "%d", &status);
+    if (status==1){
+        snprintf(buf, MAXLINE, "error:7,note: has not been paid");
+        return;
+    }
+    /* 能否多次退款的开关 */
+    if (status==3){
+        snprintf(buf, MAXLINE, "error:5,note: has been refund");
+        return;
+    }
+    long long left = pay - refund;
+    if (amount > left){
+        snprintf(buf, MAXLINE, "error:6,note:max=%lld", left);
+        return;
+    }
+
+    release_after_select(mysql_handler, result);
+
+    snprintf(sql, MAXLINE, "insert into txproj_refund (deal_id, buyer_id, seller_id, amount, refund_time) values \
+            (%d, %d, %d, %lld, now());", deal_id, buyer_id, seller_id, amount);
+    query(mysql_handler, sql);
+    snprintf(sql, MAXLINE, "update txproj_deal set status=3, refund=refund+%lld where id=%d", amount, deal_id);
+    query(mysql_handler, sql);
+    snprintf(buf, MAXLINE, "error:0,note:%lld", amount);
+    exitdb(mysql_handler);
+}
+
 
 
 int check_token_with_id(MYSQL* mysql_handler, int type, int id, char *token){
@@ -431,7 +537,6 @@ void list(const char *recv, char *buf, int len){
         return;
     }
     
-    printf("%s\n", sql);
     int size = query(mysql_handler, sql);
     MYSQL_RES *result = mysql_use_result(mysql_handler);
     unsigned i,ncol = mysql_field_count(mysql_handler);   /* 列数 */
@@ -443,11 +548,10 @@ void list(const char *recv, char *buf, int len){
 
     /* 表 */
     MYSQL_ROW *row = (MYSQL_ROW*)mysql_fetch_row(result);
-    if (row)
-        printf("%s,%s\n", (const char*)row[0], token); 
     while (row){                                        /* 不停读行 */
         snprintf(line, MAXLINE, 
-                "{\"id\":%s, \"%s\":%s, \"amount\":%s, \"refound\":%s, \"create_time\":%s, \"status\":%s}",
+                // \"%s\":%s, 这里格式错误，调试2小时！$.get[JSON]()的回调函数一直不运行。
+                "{\"id\":%s, \"%s\":\"%s\", \"amount\":%s, \"refund\":%s, \"create_time\":\"%s\", \"status\":%s}",
                 (const char*)row[0], other, (const char*)row[1],
                 (const char*)row[2],(const char*)row[3],(const char*)row[4],(const char*)row[5]);
         if (strlen(line) >= left)                 /* 缓冲区已满 */

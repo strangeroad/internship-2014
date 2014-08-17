@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>买家</title>
+    <title>卖家</title>
 
     <!-- Bootstrap -->
     <link href="bootstrap-3.2.0-dist/css/bootstrap.min.css" rel="stylesheet">
@@ -146,6 +146,12 @@ $("#myModal-pay button:contains('确定')").click(function(){
             }
         });
     });
+$(
+$.get("/cgi-bin/txproj_list", function(data){
+        console.log("list:");
+        console.log(data);
+    });
+);
 </script>
   </body>
 </html>
