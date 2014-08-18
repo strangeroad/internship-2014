@@ -36,7 +36,8 @@ int main(int argc, char *argv[])
             string cmd = "list|" + type + '|' + id + '|' + token;
             send_reci(cmd.c_str(), cmd.size()+10, buf_recv, MAXLINE);
             // 有没有长度都行的
-            cout << "Content-Length:" << strlen(buf_recv)+32 << "\r\n";
+            // 有但不对会误导浏览器，使执行时间长达15秒！！！！
+            // cout << "Content-Length:" << strlen(buf_recv)+2 << "\r\n";
             cout << "Content-Type:application/json" << "\r\n\r\n";
             // 格式必须json正确，不如$.get[JSON]回调函数不执行，大坑！！！
             cout << buf_recv << "\r\n";
