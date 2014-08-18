@@ -311,7 +311,8 @@ void pay2(const char *recv, char *buf, int len){
     int deal_id, buyer_id, seller_id;
     char sql[MAXLINE] = "\0", token[32]="\0", password_pay[32]="\0";
     sscanf(recv, "pay|%d|%[^|]|%d|%[^|]", &deal_id, password_pay, &buyer_id, token);
-    printf("pay|%d|%s|%d|%s\n", deal_id, password_pay, buyer_id, token);
+    // debug
+    // printf("pay|%d|%s|%d|%s\n", deal_id, password_pay, buyer_id, token);
     if (!check_token_with_id(mysql_handler, BUYER, buyer_id, token)){
         snprintf(buf, MAXLINE, "error:1,note:token error");
         return;
@@ -518,12 +519,21 @@ void list(const char *recv, char *buf, int len){
     MYSQL* mysql_handler = connectdb();
     char name[32], token[32], sql[MAXLINE];
     int type, id;
+    /*
+    printf("list function\n");
+    printf("make handler\n");
+    printf("recv:%s, before sscanf\n", recv);
+    printf("sql:%s\n", sql); 
+    printf("fetch now\n"); 
+     * 这个sscanf原来真没有问题，全部重新编译就好，白花我一个钟！
+     * 后来发现，mysql query browser也要重新链接，然后才好
+     */
     sscanf(recv, "list|%d|%d|%s", &type, &id, token);
+    printf("list|%d|%d|%s", type, id, token);
     if (!check_token_with_id(mysql_handler, type, id, token)){
         snprintf(buf, len, "error:1,note:token error");
         return;
     }
-
 
     const char* other;
     if (type==BUYER) {
@@ -536,7 +546,7 @@ void list(const char *recv, char *buf, int len){
         snprintf(buf, MAXLINE, "error:8,note:type error");
         return;
     }
-    
+
     int size = query(mysql_handler, sql);
     MYSQL_RES *result = mysql_use_result(mysql_handler);
     unsigned i,ncol = mysql_field_count(mysql_handler);   /* 列数 */
@@ -544,7 +554,6 @@ void list(const char *recv, char *buf, int len){
     char data[MAXLINE] = "\0",
          line[MAXLINE] = "\0";
     int left = sizeof(data);
-
 
     /* 表 */
     MYSQL_ROW *row = (MYSQL_ROW*)mysql_fetch_row(result);

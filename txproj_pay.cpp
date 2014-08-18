@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
             int err = -1;
             char note[32] = "\0", strid[32]="\0";
             sscanf(buf_recv, "error:%d,note:%[^|]|%s", &err, strid, note);
-            if (err==0){    // 登录后重定向
+            if (err==0){
                 cout << "Content-Type:application/json" << "\r\n\r\n";
                 // 格式必须json正确，不如$.get[JSON]回调函数不执行，大坑！！！
                 cout << "{\"error\":0}" << "\r\n";

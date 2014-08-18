@@ -28,9 +28,11 @@ txproj_refund : txproj_refund.cpp common.h common.cpp
 ln : txproj_server txproj_login txproj_list
 	sudo ln -s $(PROJ_DIR)/demo/bootstrap-3.2.0-dist 	$(STATCI_DIR)/
 	sudo ln -s $(PROJ_DIR)/txproj_*.html				$(STATCI_DIR)/
-	sudo ln -s $(PROJ_DIR)/txproj_server				$(CGI_DIR)/cgi-bin/
-	sudo ln -s $(PROJ_DIR)/txproj_login					$(CGI_DIR)/cgi-bin/
-	sudo ln -s $(PROJ_DIR)/txproj_list					$(CGI_DIR)/cgi-bin/
+	sudo ln -s $(PROJ_DIR)/txproj_server				$(CGI_DIR)/
+	sudo ln -s $(PROJ_DIR)/txproj_login					$(CGI_DIR)/
+	sudo ln -s $(PROJ_DIR)/txproj_list					$(CGI_DIR)/
+	sudo ln -s $(PROJ_DIR)/txproj_pay					$(CGI_DIR)/
+	sudo ln -s $(PROJ_DIR)/txproj_refund				$(CGI_DIR)/
 
 test : everything
 	./txproj_server &
@@ -38,7 +40,8 @@ test : everything
 clean : 
 	sudo /bin/rm /var/www/txproj_*.html /var/www/bootstrap-3.2.0-dist
 	sudo /bin/rm /usr/lib/cgi-bin/txproj_*
-	/bin/rm $(find txproj_* -maxdepth 1 -perm 755 -type f)
+	find txproj_* -maxdepth 1 -perm 755 -type f -exec /bin/rm {} \;
+	/bin/rm $(find . txproj_* -maxdepth 1 -perm 755 -type f)
 
 reset :
 	clean

@@ -26,74 +26,6 @@
             </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-xs-10 col-xs-offset-1">
-            <div class="row">
-                <div class="col-xs-8">
-                    <p>订单号：<b>2011050698</b></p>
-                    <p>时间：2014-08-07 20:24</p>
-                    <p>金额：200元</p>
-                    <p>状态：未支付</p>
-                    <p>物品A，物品B……</p>
-                </div>
-                <div class="col-xs-4">
-                    <button type="button" class="btn btn-default disabled">退款</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <hr></hr>
-    <div class="row">
-        <div class="col-xs-10 col-xs-offset-1">
-            <div class="row">
-                <div class="col-xs-8">
-                    <p>订单号：<b>2011050698</b></p>
-                    <p>时间：2014-08-07 20:24</p>
-                    <p>金额：200元</p>
-                    <p>状态：已支付</p>
-                    <p>物品A，物品B……</p>
-                </div>
-                <div class="col-xs-4">
-                    <button type="button" class="btn btn-default">退款</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <hr></hr>
-    <div class="row">
-        <div class="col-xs-10 col-xs-offset-1">
-            <div class="row">
-                <div class="col-xs-8">
-                    <p>订单号：<b>2011050698</b></p>
-                    <p>时间：2014-08-07 20:24</p>
-                    <p>金额：200元</p>
-                    <p>状态：已退款</p>
-                    <p>物品A，物品B……</p>
-                </div>
-                <div class="col-xs-4">
-                    <button type="button" class="btn btn-default disabled">退款</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <hr></hr>
-    <div class="row">
-        <div class="col-xs-10 col-xs-offset-1">
-            <div class="row">
-                <div class="col-xs-8">
-                    <p>订单号：<b>2011050698</b></p>
-                    <p>时间：2014-08-07 20:24</p>
-                    <p>金额：200元</p>
-                    <p>状态：已支付</p>
-                    <p>物品A，物品B……</p>
-                </div>
-                <div class="col-xs-4">
-                    <button type="button" class="btn btn-default">退款</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <hr></hr>
   </div>
 
 <!-- modal 模态框 -->
@@ -105,19 +37,19 @@
         <h3 class="modal-title" id="myModalLabel">支付确认</h3>
       </div>
       <div class="modal-body">
-        <form role="form" action="pay.html" method="POST">
+        <form role="form" action="/cgi-bin/txproj_pay" method="POST">
         <div class="form-group">
             <label for="dealid">订单号：</label>
             <input type="text" class="form-control" id="dealid" placeholder="订单号" value="">
         </div>
         <div class="form-group">
-            <label for="password_pay">支付密码：</label>
-            <input type="password" class="form-control" id="password_pay" placeholder="支付密码">
+            <label for="amount">退款金额（单位分）：</label>
+            <input type="amount" class="form-control" id="amount" placeholder="单位分">
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-info btn-lg col-xs-3" data-dismiss="modal">关闭</button>
-        <button type="submit" class="btn btn-danger btn-lg col-xs-6 col-xs-offset-4">确定</button>
+        <button type="button" class="btn btn-danger btn-lg col-xs-6 col-xs-offset-4">确定</button>
       </div>
       </form>
     </div><!-- /.modal-content -->
@@ -129,7 +61,9 @@
   <!-- Include all compiled plugins (below), or include individual files as needed -->
   <script src="bootstrap-3.2.0-dist/js/bootstrap.min.js"></script>
 <script type="text/javascript">
-$("div.col-xs-4 button:enabled:contains('支付')").click(function(){
+
+function setfun(){
+$("div.col-xs-4 button:enabled:contains('退款')").click(function(){
         var dealid = $(this).parent("div").prev("div").find("b").text();
         // 下两句颠倒则val =>> text 效果，大概是工具本身bug。
         $("#myModal-pay #dealid").val(dealid);
@@ -137,21 +71,78 @@ $("div.col-xs-4 button:enabled:contains('支付')").click(function(){
     });
 $("div.col-xs-4 button:enabled:contains('取消')").click(function(){
     });
+}
+
+
 $("#myModal-pay button:contains('确定')").click(function(){
-        var dealid = $("#dealid").text();
-        var postdata = {"password_pay":$("#password_pay").val(), "dealid":dealid};
-        $.post("pay.html", postdata, function(data){
-            if (data["error"] === 0){
-                window.location.reload();
+        var dealid = $("#dealid").val();
+        var postdata = {"amount":$("#amount").val(), "dealid":dealid};
+        $.post("/cgi-bin/txproj_refund", postdata, function(data){
+            if (data["error"] == 0){
+                alert("退款成功");
+                var sel = 'div#dealid'+dealid+'';
+                $(sel).find("button:first").addClass("disabled");
+                $("#myModal-pay").modal("hide");
+                // window.location.reload();
             }
         });
     });
-$(
-$.get("/cgi-bin/txproj_list", function(data){
-        console.log("list:");
-        console.log(data);
+
+
+/**
+* 字符串格式化，类似于java中的MessageFormat.format() 函数
+*/
+String.format = function(src){
+    if (arguments.length == 0) return null;
+    var args = Array.prototype.slice.call(arguments, 1);
+    return src.replace(/\{(\d+)\}/g, function(m, i){
+        return args[i];
     });
-);
+};
+
+var item_tpl = '\
+    <div class="row" id="dealid{0}"> \
+        <div class="col-xs-10 col-xs-offset-1"> \
+            <div class="row"> \
+                <div class="col-xs-8"> \
+                <p>订单号：<b>{1}</b></p> \
+                    <p>时间：{2}</p> \
+                    <p>金额：{3}元</p> \
+                    <p>状态：{4}</p> \
+                    <p>物品A，物品B……</p> \
+                </div> \
+                <div class="col-xs-4"> \
+                    <button type="button" class="btn btn-success {5}">退款</button> \
+                </div> \
+            </div> \
+        </div> \
+    </div> \
+    <hr></hr>';
+
+$(function(){
+$.get("/cgi-bin/txproj_list", function(data){
+        console.log(data);
+        var items = data["data"];
+        for (var i=0; i<items.length; i++){
+            var dd = items[i];
+            var v3, v4, v5;
+            if (dd["status"]==1){
+                v3 = "未支付";
+                v4 = "disabled";
+            }else if (dd["status"]==2){
+                v3 = "已支付";
+                v4 = "";
+            }else if (dd["status"]==3){
+                v3 = "已退款"+dd["refund"]+"元";
+                v4 = "disabled";
+            }
+            var html = String.format(item_tpl, dd["id"], dd["id"], dd["create_time"], dd["amount"]/100.0, v3, v4);
+            $("body div.container").append(html);
+        }
+        setfun();
+    });
+});
+
 </script>
   </body>
 </html>
