@@ -3,7 +3,7 @@
  *
  *       Filename:  txproj_server.c
  *
- *    Description:  connect mysql 注意：需要防注入，密码不使用明文
+ *    Description:  注意：需要防注入，密码不使用明文 现在通讯格式不统一
  *
  *        Version:  1.0
  *        Created:  2014年08月13日 17时05分39秒
@@ -54,10 +54,10 @@ void token(const char *recv, char *buf, int len);
 /* 命令：login type name password 返回 */
 void login(const char *recv, char *buf, int len);
 /* 命令：pay deal_id buyer_id seller_id amount 返回 */
-void pay(const char *recv, char *buf, int len);
+void pay(const char *recv, char *buf, int len);     // 不适用
 void pay2(const char *recv, char *buf, int len);
 /* 命令：refund dealid buyer seller amount */
-void refund(const char *recv, char *buf, int len);
+void refund(const char *recv, char *buf, int len);  // 不适用
 void refund2(const char *recv, char *buf, int len);
 /* 命令：list type name token */
 void list(const char *recv, char *buf, int len);
@@ -263,7 +263,7 @@ void login(const char *recv, char *buf, int len){
  * txproj_pay  : insert
  * txproj_deal : update
  */
-void pay(const char *recv, char *buf, int len){
+void pay(const char *recv, char *buf, int len){     // 不适用
     MYSQL* mysql_handler = connectdb();
     long long amount;
     int deal_id, buyer_id, seller_id;
@@ -352,7 +352,7 @@ void pay2(const char *recv, char *buf, int len){
  * txproj_refund    : insert
  * txproj_deal      : update
  */
-void refund(const char *recv, char *buf, int len){
+void refund(const char *recv, char *buf, int len){      // 不适用
     MYSQL* mysql_handler = connectdb();
     long long amount;
     int deal_id, buyer_id, seller_id;
@@ -528,10 +528,11 @@ void list(const char *recv, char *buf, int len){
      * 这个sscanf原来真没有问题，全部重新编译就好，白花我一个钟！
      * 后来发现，mysql query browser也要重新链接，然后才好
      */
+    printf("before sscanf: %s\n", recv);
     sscanf(recv, "list|%d|%d|%s", &type, &id, token);
     printf("list|%d|%d|%s", type, id, token);
     if (!check_token_with_id(mysql_handler, type, id, token)){
-        snprintf(buf, len, "error:1,note:token error");
+        snprintf(buf, len, "{\"error\":1,\"note\":\"token error\"}");
         return;
     }
 
@@ -543,7 +544,7 @@ void list(const char *recv, char *buf, int len){
         snprintf(sql, MAXLINE, "select a.id, b.name, a.amount, a.refund, a.create_time, a.status from txproj_deal as a, txproj_seller as b where a.seller_id=b.id and b.id=%d", id);
         other = "buyer";
     } else {
-        snprintf(buf, MAXLINE, "error:8,note:type error");
+        snprintf(buf, MAXLINE, "{\"error\":8,\"note\":\"type error\"}");
         return;
     }
 

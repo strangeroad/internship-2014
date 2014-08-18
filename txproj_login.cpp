@@ -76,9 +76,8 @@ int main(int argc, char *argv[])
 
         // 其他情况，失败
         cout << HTTPHTMLHeader();
-        cout << "login " << buf_recv << "\r\n";
         cout << "<script type=\"text/javascript\"> \
-                alert(\"login error\");\
+                alert(\"login " << buf_recv << "\");\
                 location.href='/txproj_index.html';\
                 </script>" << "\r\n";
     }

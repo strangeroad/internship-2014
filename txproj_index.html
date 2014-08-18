@@ -23,24 +23,74 @@
             <h1>模拟登录平台</h1>
         </div>
     </div>
+
+    <div class="row">
+        <div class="col-md-4 col-md-offset-4">
+            <!--
+            <h4>可用帐号密码</h4>
+            -->
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>帐号</th>
+                        <th>密码</th>
+                        <th>支付密码</th>
+                        <th>备注</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>rich</td>
+                        <td>rich</td>
+                        <td>richer</td>
+                        <td>推荐登录买家</td>
+                    </tr>
+                    <tr>
+                        <td>jinanyuan</td>
+                        <td>jinanyuan</td>
+                        <td>jinanyuan</td>
+                        <td>推荐登录卖家</td>
+                    </tr>
+                    <tr>
+                        <td>simple</td>
+                        <td>123456</td>
+                        <td>654321</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>poor</td>
+                        <td>poor</td>
+                        <td>poorer</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-md-4 col-md-offset-4">
             <form role="form" action="/cgi-bin/txproj_login" method="POST">
                 <div class="form-group">
                     <label for="name">帐号：</label>
-                    <input type="text" class="form-control" name="name" id="name" placeholder="帐号">
+                    <input type="text" class="form-control input-lg" name="name" id="name" placeholder="帐号">
                 </div>
                 <div class="form-group">
                     <label for="password">密码：</label>
-                    <input type="password" class="form-control" name="password" id="password" placeholder="密码">
+                    <input type="password" class="form-control input-lg" name="password" id="password" placeholder="密码">
                 </div>
-                <label class="radio-inline">
-                    <input type="radio" name="type" id="type1" value="1"> 卖家
-                </label>
-                <label class="radio-inline">
-                    <input type="radio" name="type" id="type2" value="2" checked=true> 买家
-                </label>
-                <button type="submit" class="btn btn-success">登录</button>
+                <div class="form-group">
+                    <label class="radio-inline">
+                        <input type="radio" name="type" id="type1" value="1"> 卖家
+                    </label>
+                    <label class="radio-inline">
+                        <input type="radio" name="type" id="type2" value="2" checked=true> 买家
+                    </label>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="col-xs-6 btn btn-lg btn-success">登录</button>
+                    <button type="reset" class="col-xs-6 btn btn-lg btn-default">重置</button>
+                </div>
             </form>
         </div>
     </div>

@@ -47,16 +47,18 @@ int main(int argc, char *argv[])
             sscanf(buf_recv, "error:%d,note:%[^|]|%s", &err, strid, note);
             if (err==0){
                 cout << "Content-Type:application/json" << "\r\n\r\n";
-                // 格式必须json正确，不如$.get[JSON]回调函数不执行，大坑！！！
                 cout << "{\"error\":0}" << "\r\n";
+                return 0;
+            } else {
+                cout << "Content-Type:application/json" << "\r\n\r\n";
+                cout << "{\"error\":" << err << ",\"note\":\"" << note <<"\"}" << "\r\n";
                 return 0;
             }
         } 
         // 其他情况，失败
         cout << HTTPHTMLHeader();
-        cout << "login " << buf_recv << "\r\n";
         cout << "<script type=\"text/javascript\"> \
-                alert(\"token error\");\
+                alert(\"login " << buf_recv << "\");\
                 location.href='/txproj_index.html';\
                 </script>" << "\r\n";
     }

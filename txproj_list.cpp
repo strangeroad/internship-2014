@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
             cout << HTTPHTMLHeader();
             cout << "login " << buf_recv << "\r\n";
             cout << "<script type=\"text/javascript\"> \
-                    alert(\"token error\");\
+                    alert(\"非法！将定向到登录页。\");\
                     location.href='/txproj_index.html';\
                     </script>" << "\r\n";
         }
