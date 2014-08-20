@@ -1,5 +1,7 @@
 no-track/
 *~
 *#
+*.pyc
 tmp_*
+src/bin/
 

@@ -45,6 +45,7 @@ void send_reci(const char* buf_send, const int len_send, char *buf_recv, const i
     if (len < 0)    err_handle("recv");
     buf_recv[len_recv] = '\0'; /* safe */
     close(socket_server);
+    
 }
 
 int err_handle(const char* str){
