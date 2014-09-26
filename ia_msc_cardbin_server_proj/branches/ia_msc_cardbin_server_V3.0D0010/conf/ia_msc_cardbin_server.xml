@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="GB2312" ?>
+<root>
+    <!--数据库配置-->
+    <database desc="ia_msc_db">
+        <host>10.12.194.206</host>
+        <port>3306</port>
+        <user>zft_dev_all</user>
+        <pswd>zft_dev_all</pswd>
+        <overtime>5</overtime>
+        <charset>UTF8</charset>
+    </database>    
+	
+	<!--远程middle连接配置信息-->
+    <middle>
+
+    </middle>
+
+    
+    <!--业务配置信息-->
+    <app>
+
+    </app>
+
+    <!--系统配置信息-->
+    <system>
+        <mid_no>100</mid_no>
+        <log_path>/usr/local/middle/log/ia_msc_cardbin_server</log_path>
+        <log_num>10</log_num>
+        <log_size>150</log_size>        
+    </system>
+
+    <obj_key>
+        <shm_key1>512</shm_key1>
+        <shm_key2>513</shm_key2>
+    </obj_key>
+
+</root>
+

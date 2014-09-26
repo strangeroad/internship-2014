@@ -1,0 +1,99 @@
+wilson@ubun:~/workplace/tencent/tencent-card$ date +"%F %A %T"2014-09-01 星期一 14:50:55
+wilson@ubun:~/workplace/tencent/tencent-card$ du ia_gcms_2014_t_IP0040T1.sql -h 30M	ia_gcms_2014_t_IP0040T1.sql
+wilson@ubun:~/workplace/tencent/tencent-card$ time mysql -upublic -ppublic ia_gcms_2014 -e "select Fissuer_acc_range_prefix, count(*) as ct from t_IP0040T1 group by Fissuer_acc_range_prefix order by ct desc limit 10;"
++--------------------------+------+
+| Fissuer_acc_range_prefix | ct   |
++--------------------------+------+
+| 551                      | 3646 |
+| 544                      | 3202 |
+| 541                      | 2987 |
+| 514                      | 2869 |
+| 545                      | 2815 |
+| 540                      | 2107 |
+| 515                      | 1993 |
+| 510                      | 1909 |
+| 542                      | 1883 |
+| 511                      | 1827 |
++--------------------------+------+
+
+real	0m0.010s
+user	0m0.008s
+sys	0m0.000s
+
+
+
+wilson@ubun:~/workplace/tencent/tencent-card$ du -h prefix3to5/ia_gcms_2014_t_IP0040T1_to.sql 
+34M	prefix3to5/ia_gcms_2014_t_IP0040T1_to.sql
+wilson@ubun:~/workplace/tencent/tencent-card$ time mysql -upublic -ppublic ia_gcms_2014 -e "select Fissuer_acc_range_prefix, count(*) as ct from t_IP0040T1 group by Fissuer_acc_range_prefix order by ct desc limit 10;"
++--------------------------+------+
+| Fissuer_acc_range_prefix | ct   |
++--------------------------+------+
+| 551                      | 3646 |
+| 544                      | 3202 |
+| 541                      | 2987 |
+| 514                      | 2869 |
+| 545                      | 2815 |
+| 540                      | 2107 |
+| 515                      | 1993 |
+| 510                      | 1909 |
+| 542                      | 1883 |
+| 511                      | 1827 |
++--------------------------+------+
+
+real	0m0.013s
+user	0m0.008s
+sys	0m0.000s
+
+
+
+
+
+
+wilson@ubun:~/workplace/tencent/tencent-card$ du -h prefix3to6/ia_gcms_2014_t_IP0040T1_to.sql 
+36M	prefix3to6/ia_gcms_2014_t_IP0040T1_to.sql
+wilson@ubun:~/workplace/tencent/tencent-card$ time mysql -upublic -ppublic ia_gcms_2014 -e "select Fissuer_acc_range_prefix, count(*) as ct from t_IP0040T1_prefix3to6 group by Fissuer_acc_range_prefix order by ct desc limit 10;"
++--------------------------+------+
+| Fissuer_acc_range_prefix | ct   |
++--------------------------+------+
+| 545313                   | 1579 |
+| 541772                   |  944 |
+| 581828                   |  560 |
+| 449221                   |  528 |
+| 412163                   |  506 |
+| 542432                   |  473 |
+| 543772                   |  463 |
+| 412125                   |  422 |
+| 412126                   |  420 |
+| 544330                   |  385 |
++--------------------------+------+
+
+real	0m0.014s
+user	0m0.004s
+sys	0m0.004s
+
+
+
+
+
+wilson@ubun:~/workplace/tencent/tencent-card$ du -h prefix3to7/ia_gcms_2014_t_IP0040T1_to.sql 
+254M	prefix3to7/ia_gcms_2014_t_IP0040T1_to.sql
+wilson@ubun:~/workplace/tencent/tencent-card$ time mysql -upublic -ppublic ia_gcms_2014 -e "select Fissuer_acc_range_prefix, count(*) as ct from t_IP0040T1_prefix3to7 group by Fissuer_acc_range_prefix order by ct desc limit 10;"
++--------------------------+-----+
+| Fissuer_acc_range_prefix | ct  |
++--------------------------+-----+
+| 5423770                  | 251 |
+| 5818280                  | 246 |
+| 5440950                  | 233 |
+| 5443308                  | 223 |
+| 5453135                  | 217 |
+| 5453131                  | 207 |
+| 5453133                  | 193 |
+| 5453130                  | 187 |
+| 5424320                  | 183 |
+| 5444000                  | 170 |
++--------------------------+-----+
+
+real	0m0.012s
+user	0m0.008s
+sys	0m0.000s
+
