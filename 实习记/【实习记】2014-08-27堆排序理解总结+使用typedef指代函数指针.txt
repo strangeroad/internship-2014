@@ -1,0 +1,166 @@
+【实习记】2014-08-27堆排序理解总结+使用typedef指代函数指针
+
+4个月前C语言版的七大排序算法实践让我在写C++版时轻车熟路。
+特别是冒泡，插入，希尔，选择这四种排序不用调试即运行成功。
+
+输出的效果与C语言做的版本完全一样，其中令我印象深刻的是，cout对浮点的处理远不如printf简单明了。设计的非常让开发者难受。
+
+写C++版时有所改进。
+#define sortfunc _selsort
+可以用
+typedef void (*sort_t)(vector<int>& arr);
+sort_t sortfunc = _selsort;
+两句代替。
+也缩短了把函数指针作参数书写的长度。
+
+
+很奇怪，又发现C语言版的堆排序是有问题的。
+这次先把C++版堆写对了再回头写C语言版。写完后对堆理解加深不少。
+
+堆具有几点性质：
+1、任意arr[i/2]<= arr[i]。
+2、堆顶元素最小。
+3、堆对应数组下标为1..n。
+4、最坏插入删除一个元素只需log2n，构造堆最坏nlog2n时间，但是处理平常输入的数据通常不如快速排序。
+
+堆排序算法：
+1、待排序目标是arr[1]到arr[n]
+2、造堆
+    a）前n-1号已经满足堆性质。增加一个n号，移动n号造堆，使得前n号为止都满足堆。
+    b）考虑n/2，n(如果n是奇数则考虑n/2,n,n-1)，交换n与n/2或交换n-1与n/2，使得n/2最小。（注：n/2总是整数）
+    c）若b）没交换，到d）；若b）发生交换，使n=n/2，重复b）操作。
+    d）前n号满足堆，使n=n+1，重复a）操作直到成功。
+3、尖堆
+    a）1到n号具有堆性质，所以1号最小，交换1和n号并移动1号使1到n-1号重新恢复堆。
+    b）j=1,考虑j，j*2，j*2+1，交换j与j*2或交换j与j*2+1使得j最小。
+    c）若b）没交换，到d）；若b发生交换，j=j*2(或j*2+1，看交换的是哪个)，重复b）。
+    d）1到n-1号具有堆性质，使n=n-1，重复a）。
+4、反序
+5、arr[1]到arr[n]已排序
+（以上算法描述个人原创，代码虽易，描述不易，且描且珍惜……）
+
+
+C++的(vector)版
+
+// void _hsort(vector<int>& arr, int len){
+MACRO_VECTOR_INT_DECLARE(_hsort){
+    // vector<int> arrtmp (len+1);
+    arr.resize(len+1);
+    int i,j,k;
+    // 右移一位
+    for (i=len;i>=1;i--)    // bug! i>1
+        arr[i] = arr[i-1];
+    // 造堆
+    for (i=2;i<=len;i++){
+        /* 这种就是用while比for好
+        for (j=i/2;j>1 && arr[j]<arr[j/2];j/=2)
+            swap(arr[j], arr[j/2]);
+          */
+        j = i;
+        while (j>1){
+            k = j/2;
+            if (j%2 && arr[j-1]<arr[j])
+                j -= 1;
+            if (arr[j]<arr[k])
+                swap(arr[j], arr[k]);
+            j = k;
+        }
+    } 
+    // 交换头尾，恢复推性质，直至反序排列
+    for (i=len;i>1;i--){
+        swap(arr[1], arr[i]);       //bug! 现在只要回复1到i-1的堆性质，而不是到i
+        j = 1;
+        while (j<i-1) {
+            k = j*2;
+            if (k>i-1)
+                break;
+            // 小的先上，冒泡味道
+            if (k+1 <=i-1 && arr[k] > arr[k+1])
+                k += 1;
+            if (arr[j]>arr[k])
+                swap(arr[j], arr[k]);
+            j = k;
+        }
+    }
+    // 反序
+    i=1;j=len;
+    while (i < j){
+        swap(arr[i], arr[j]);
+        i++;j--;
+    }
+    // 复位 
+    for (i=0;i<len;i++)
+        arr[i] = arr[i+1];
+    arr.resize(len);
+}
+
+
+
+C语言版
+
+void _hsort(int arr[], int len)
+{
+    int i,j,t;
+    /*int *arrtmp = (int*)malloc((len+1)*sizeof(int));
+    for (i=0; i<len; i++)
+        arrtmp[i+1] = arr[i];*/
+    int *arrtmp = arr-1; /*处理技巧：这样就不用额外内存，注意不要用arrtmp[0];*/
+    /* make heap */
+    for (i=2; i<=len; i++){
+        /* shift up 以保持堆性质 */
+        j=i,t=j/2;
+        while (t>=1){
+            if (j%2 && arrtmp[j]>arrtmp[j-1])
+                j -= 1;
+            if (arrtmp[t]>arrtmp[j])
+                swap(arrtmp[t], arrtmp[j]);
+            j=t,t=j/2;
+        }
+        /*t = i/2; 
+         *while (t>=1 && arrtmp[t]>arrtmp[i]){
+         *    swap(arrtmp[t],arrtmp[i]);
+         *    i = t, t = i/2;
+         *}
+         * Bug!
+         * while循环见鬼了：
+         * 1、去掉swap句会死循环，2、平方时间。
+         * gdb display t 跟踪，t值变化很吓人。
+         * 找3小时同时gdb display i才找到原因:i=t,t=i/2;改变了外层for的i递增。相当隐秘。
+         */
+    }
+    /* 排序后是逆序的 */
+    for (i=len; i>=2; i--){
+        swap(arrtmp[i], arrtmp[1]);
+        /* shif down */
+        j = 1, t = j*2;
+        while(t<i-1){
+            if (t+1<i && arrtmp[t]>arrtmp[t+1])
+                t += 1;
+            if (arrtmp[t] < arrtmp[j])
+                swap(arrtmp[t], arrtmp[j]);
+            j = t, t = 2*j;
+        }
+    }
+    i=1,j=len;
+    while (i<j)
+    {
+        swap(arrtmp[i], arrtmp[j]);
+        i++; j--;
+     }   /* bug!! arrtmp[i++] = arrtmp[j--]; */ 
+    /*for (i=0; i<len; i++)
+        arr[i] = arrtmp[len-i];
+    free(arrtmp);*/
+}
+
+
+
+技巧：
+一、传入的数组指针有效下标一般是0到n-1，而堆排序要求下标是1到n。
+    解决方法：新建指针变量指向传入指针的前一个位置，操作新指针即可。
+    原来的方法：申请内存，错位复制过去，排序后复制回来。
+
+
+
+git记录：
+发现_hsort函数问题，从master的某个提交checkout，然后git branch 建立分支， 再checkout都分支，在分支上修复成功后git rebase都几个分支上，出现冲突，解决，继续，因为冲突，git log显示之前的提交时间都被修改了。所以应该用git merge比较好。
+

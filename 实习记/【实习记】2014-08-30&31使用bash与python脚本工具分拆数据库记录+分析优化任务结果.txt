@@ -1,0 +1,175 @@
+【实习记】2014-08-30&31使用bash与python脚本工具分拆数据库记录+分析优化任务结果
+
+关于前两天的知值求区间（区间数据在数据库中，非静态）问题
+今天主要实践了数据库分拆方案。我关心的是，会有多大的冗杂，数据库体积会膨胀几陪。
+
+结果报告（之一）：
+由前3位索引变成前5位索引，体积只膨胀了15%，select命中数优化了2.5倍
+
+mysql> select Fissuer_acc_range_prefix, count(*) as ct from t_IP0040T1 group by Fissuer_acc_range_prefix order by ct desc limit 10;
++--------------------------+------+
+| Fissuer_acc_range_prefix | ct   |
++--------------------------+------+
+| 551                      | 3646 |
+| 544                      | 3202 |
+| 541                      | 2987 |
+| 514                      | 2869 |
+| 545                      | 2815 |
+| 540                      | 2107 |
+| 515                      | 1993 |
+| 510                      | 1909 |
+| 542                      | 1883 |
+| 511                      | 1827 |
++--------------------------+------+
+10 rows in set (0.00 sec)
+
+mysql> select Fissuer_acc_range_prefix, count(*) as ct from t_IP0040T1_3to5prefix group by Fissuer_acc_range_prefix order by ct desc limit 10;
++--------------------------+------+
+| Fissuer_acc_range_prefix | ct   |
++--------------------------+------+
+| 54531                    | 1584 |
+| 54177                    | 1311 |
+| 55116                    |  871 |
+| 51440                    |  862 |
+| 41212                    |  857 |
+| 54377                    |  672 |
+| 55112                    |  587 |
+| 58182                    |  562 |
+| 41216                    |  548 |
+| 44922                    |  530 |
++--------------------------+------+
+10 rows in set (0.00 sec)
+
+为了写脚本，周六晚上11点20才下班，下班时还没进行上面测试。周日测试结果如上，差点要放弃这条思路。
+
+不过周日后来还想懂，这个规律也能用于获取正确解决方案：
+想要用分拆数据表中记录来使select命中程度增大100倍，其数据表膨胀也理论上是100倍。而实际10～100是都合理的，反过来用就能找解决方法。
+举例说明：
+当前select的命中记录最多有3600条，要降20倍成180，那么分拆记录后期望数据膨胀为5～15倍。反过来也成立。
+现在3位变5位后数据膨胀只有15%，那么期望其命中效率会优化1～2倍是合理的。
+
+于是增加前缀索引长度继续尝试：
+该表导出的sql文件大小为30M，索引变成前8位时膨胀为2.5G，索引变成前7位时膨胀为260M，所以使用前7位做索引应该能达到最大命中180条。
+
+
+[有待成功实行7位时的测试结果]
+
+
+
+
+脚本主要将数据库表导出后的sql文件进行处理，前缀索引是042的，变成042XX五位前缀。使用以下两个脚本完成任务。
+
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+
+'''
+filename:       3to5prefix.py
+description:    修改sql文件里的insert语句，智能分拆记录，由3位前导符修改成5位前导符的
+'''
+
+import os, sys
+
+def sql_line_3to5prefix(line):
+    '''
+    line : "('1328814','A','0424100000000000000','042','CIR','0424309999999999999',...),"
+    返回 : "('1328814','A','0424100000000000000','04241','CIR','0424109999999999999',...),"
+           "('1328814','A','0424200000000000000','04242','CIR','0424209999999999999',...),"
+           "('1328814','A','0424300000000000000','04243','CIR','0424309999999999999',...),"
+
+    line : "('1328814','A','0424100000000000000','042','CIR','0424309999999999999',...);"
+    返回 : "('1328814','A','0424100000000000000','04241','CIR','0424109999999999999',...),"
+           "('1328814','A','0424200000000000000','04242','CIR','0424209999999999999',...),"
+           "('1328814','A','0424300000000000000','04243','CIR','0424309999999999999',...);"
+    '''
+    rows = []
+    # line end with '\n'
+    line_end = line[-2:] # 行尾可以是,或;
+    tuple_row = eval(line[:-2])
+    card_number_low = long(tuple_row[2])
+    card_number_high = long(tuple_row[5])
+    low_prefix = int(tuple_row[2][:5])
+    low_suffix = tuple_row[2][5:]
+    high_prefix = int(tuple_row[5][:5])
+    high_suffix = tuple_row[5][5:]
+
+    for i in range(low_prefix, high_prefix+1):
+        new_list_row = list(tuple_row)
+        prefix = '%05d' % i     # 注意，前导0要保留！
+        new_list_row[2] = prefix + ('00000000000000' if i!=low_prefix else low_suffix)
+        new_list_row[5] = prefix + ('99999999999999' if i!=high_prefix else high_suffix)
+        new_list_row[3] = prefix
+        rows.append(tuple(new_list_row))
+
+    return ',\n'.join(str(i) for i in rows) + line_end
+
+def sql_file_3to5prefix(filename, tofilename='3to5prefix.sql'):
+    infile = open(filename, 'r')
+    outfile = open(tofilename, 'w')
+    for line in infile:
+        # print repr(line);
+        if len(line)>4 and line[0]=='(' and line[-3]==')' and line[-2] in (',',';'):
+            outfile.write(sql_line_3to5prefix(line))
+        else:
+            outfile.write(line)
+    infile.close()
+    outfile.close()
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print "<py> <sql_src> [sql_to]"
+        exit(2)
+    if len(sys.argv) == 2:
+        sql_file_3to5prefix(sys.argv[1])
+    else:
+        sql_file_3to5prefix(sys.argv[1], sys.argv[2])
+
+    
+
+#!/usr/bin/env bash
+#coding: utf8
+
+# filename:     3to5prefix.sh
+# description:  改变一下参数，使得数据库表自动有前3位做，转化到5位索引。
+# note:         涉及备份mysql，sed改关键字，分拆sql记录，恢复mysql数据库。
+
+HOST=localhost
+PORT=3306
+USER=public
+PASSWORD=public
+DATABASE=ia_gcms_2014
+# 来源表，表名要足够唯一，保证表名字不会被其他词命中，不然会错。
+TABLE_SRC=t_IP0040T1
+# 目标表，若已存在会覆盖
+TABLE_TO=${TABLE_SRC}_3to5prefix
+
+# 临时sql文件
+SQLFILE=${DATABASE}_${TABLE_SRC}.sql
+SQLFILE_SED=${DATABASE}_${TABLE_SRC}_sed.sql
+SQLFILE_MODIFY=${DATABASE}_${TABLE_SRC}_to.sql
+
+# 删除临时文件吗？
+DEL_TEMP_FILE=True
+
+mysqldump -h${HOST} -P${PORT} -u${USER} -p${PASSWORD} ${DATABASE} ${TABLE_SRC} > ${SQLFILE}
+
+# 改表名
+# sed "s/DROP TABLE IF EXISTS \`${TABLE_SRC}\`/DROP TABLE IF EXISTS \`${TABLE_TO}\`/;\
+#     s/CREATE TABLE \`${TABLE_SRC}\`/CREATE TABLE \`${TABLE_TO}\`/;\
+#     s/INSERT INTO \`${TABLE_SRC}\` VALUES/INSERT INTO \`${TABLE_to}\` VALUES/;" ${SQLFILE} > ${SQLFILE_SED}
+sed "s/ \`${TABLE_SRC}\`/ \`${TABLE_TO}\`/;" ${SQLFILE} > ${SQLFILE_SED}
+
+# 改bug
+sed -i "s/\`Fissuer_acc_range_prefix\` varchar(4)/\`Fissuer_acc_range_prefix\` varchar(8)/" ${SQLFILE_SED}
+
+# INSERT INTO `t_IP0040T1` VALUES (...), (...);
+# to:
+# INSERT INTO `t_IP0040T1` VALUES 
+# (...), 
+# (...);
+sed -i '/INSERT INTO.*VALUES.*;$/{s/(/\n(/g}' ${SQLFILE_SED}
+
+python ./3to5prefix.py ${SQLFILE_SED} ${SQLFILE_MODIFY}
+
+mysql -h${HOST} -P${PORT} -u${USER} -p${PASSWORD} ${DATABASE} < ${SQLFILE_MODIFY}
+
+# [ $${DEL_TEMP_FILE} ] && /bin/rm ${SQLFILE} ${SQLFILE_MODIFY}

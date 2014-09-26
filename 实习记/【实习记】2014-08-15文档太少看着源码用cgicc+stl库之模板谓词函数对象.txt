@@ -1,0 +1,81 @@
+【实习记】2014-08-15文档太少看着源码用cgicc+stl库之模板谓词函数对象
+
+总结1：
+
+今天找到了昨天scanf的问题答案，scanf与printf一样的神奇而复杂，稍不留神，就会被坑。
+scanf函数在读入非空白符分割的多个字符串的解决方法是这个：
+/* 以 | 分割 */
+scanf("login|%d|%[^|]|%[^|]", &type, name, password);
+
+总结2：
+C++排错是个苦活，又无法避免减轻，不要stl也不能不用<string>吧。倒不是python宠坏了程序员，而是C++本身语法复杂，层次繁杂，过于抽象。
+不过在某些方面用好c++确实比c要好用。
+
+总结3：
+
+文档太少，看着源码用cgicc。
+登录后需要重定向，先看看cgicc是否已经做好这功能。
+第一步：
+grep 301 . -inr
+第二步：
+发现HTTPRedirect.cpp，定位到
+cgicc::HTTPRedirectHeader::render(std::ostream& out) 	const
+已经有实现。
+第三步：
+如何使用？发现render源码中有很多，直接调用吗？
+感谢我课堂上学的《accelerate c++》,想起里面提到的关键字friend用于在类外实现类的输出功能。
+于是猜到render()其实是重载符<<的实现者的。
+第四步：
+联想见过的cout << HTTPHTMLHeader() << endl;
+悟到使用方式：cout << HTTPRedirectHeader(url) << endl; 
+测试成功，证实了我的想法，对cgicc的某些部分认识加深。
+
+感悟：
+第一次知道看源码去用某个库是在python世界里的，然而第一次实现这想法确实在C++里！
+
+
+总结4：
+
+cgicc不大不小，看源码很有益，适合c++已入门者。
+只要看得懂，很多C++的东西瞬间找回来。
+我主要看来demo/下的示例，header，cookie部分的源码。
+
+总结5：
+stl库之模板,谓词，函数对象
+
+cgicc::const_form_iterator 
+cgicc::Cgicc::getElement(const std::string& name) 		const
+{
+  return std::find_if(fFormData.begin(), fFormData.end(),FE_nameCompare(name));
+}
+跟踪FE_nameCompare()定义：
+class FE_nameCompare : public std::unary_function<FormEntry, bool>
+  {
+  public:
+    
+    inline explicit FE_nameCompare(const std::string& name)
+      : fName(name) {}
+    
+    inline bool operator() (const FormEntry& entry) 	const
+    { return stringsAreEqual(fName, entry.getName()); }
+    
+  private:
+    std::string fName;
+  };
+是函数对象，用到了unary_function
+template<typename _Arg, typename _Result>
+    struct unary_function
+    {
+      /// @c argument_type is the type of the argument
+      typedef _Arg 	argument_type;   
+
+      /// @c result_type is the return type
+      typedef _Result 	result_type;  
+    };
+来自stl的，目的就是类型改名，以便它的子类
+equal_to<Type>、not_equal_to<Type>、greater<Type>、greater_equal<Type>、less<Type>、less_equal<Type>
+使用同样类型名，因为定义stl时，Type类型名没传进去。
+
+同时也在复习谓词，谓词在stl大量使用，比较简单，常见用函数或函数对象解决，函数对象时牵涉到上面内容。
+感悟：
+C++内容连贯一体，不容易啊。

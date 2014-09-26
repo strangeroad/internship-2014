@@ -1,0 +1,55 @@
+【实习记】2014-08-17关于json格式的小错误花2小时debug
+
+现象：jQuery开发时$.get()或$.getJSON()的回调均没调用，但firebug中确定以请求该资源。
+
+原因：返回的json格式出错，"name":json,因为这样没有双引号而导致的。
+
+排除过程：
+1、查看服务器的http头，确定Conten-Type:application/json没有错。
+2、回调函数没有执行，想到换掉旧的可用jquery和boostrap版本，结果并非版本问题。
+3、修改回调函数，不管怎样都无法执行。
+4、对比其它正确的json的http头，但无论有无加入Content-Length都不行。
+5、修改json成{error:0}，成功，逐步对比并增量调试json，发现问题。修正，成功。
+
+相关代码如下
+
+txproj_server.c
+    /* 表 */
+    MYSQL_ROW *row = (MYSQL_ROW*)mysql_fetch_row(result);
+    while (row){                                        /* 不停读行 */
+        snprintf(line, MAXLINE, 
+                // \"%s\":%s, 这里格式错误，调试2小时！$.get[JSON]()的回调函数一直不运行。
+                "{\"id\":%s, \"%s\":\"%s\", \"amount\":%s, \"refund\":%s, \"create_time\":\"%s\", \"status\":%s}",
+                (const char*)row[0], other, (const char*)row[1],
+                (const char*)row[2],(const char*)row[3],(const char*)row[4],(const char*)row[5]);
+        if (strlen(line) >= left)                 /* 缓冲区已满 */
+            break;
+        strncat(data, line, left); 
+        left -= strlen(line);
+        strncat(data, ",", 1);
+        row = (MYSQL_ROW*)mysql_fetch_row(result);
+    }
+
+
+txproj_list.cpp
+
+        if (type!="" && name!="" && token!="" && id!=""){
+        // if (type=="" || name=="" || token=="" || id==""){
+            string cmd = "list|" + type + '|' + id + '|' + token;
+            send_reci(cmd.c_str(), cmd.size()+10, buf_recv, MAXLINE);
+            // 有没有长度都行的
+            cout << "Content-Length:" << strlen(buf_recv)+32 << "\r\n";
+            cout << "Content-Type:application/json" << "\r\n\r\n";
+            // 格式必须json正确，不如$.get[JSON]回调函数不执行，大坑！！！
+            cout << buf_recv << "\r\n";
+            // cout << "{\"error\":0}" << "\r\n";
+            // cout << "{\"error\":0,\"type\":2, \"len\":0, \"data\":[]}" << "\r\n";
+            // cout << "{\"error\":0,\"type\":2, \"len\":0, \"data\":[{\"test\":1}]}" << "\r\n";
+        } else {
+
+
+txproj_buyer.html
+
+$.get("/cgi-bin/txproj_list", function(data){
+        console.log(data);
+        });

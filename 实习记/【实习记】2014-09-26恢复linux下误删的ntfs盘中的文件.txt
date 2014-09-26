@@ -1,0 +1,59 @@
+【实习记】2014-09-26恢复linux下误删的ntfs盘中的文件
+
+情景，ubuntu下把NTFS格式的盘中的“实习记”文件夹彻底删除了，追毁莫及，粗心觉不是一件好的事情。
+
+linux下回复ntfs盘下的文件不能用ext3grep，而使用debugfs命令实在很原始。
+
+万幸所有记录文件的文件名都是：【实习记】2014-0****.txt
+
+最后使用ntfsundelete + chown + chmod + sed 完美恢复刚才删除是所以TXT文件。
+
+0、
+sudo umount 该ntfs盘
+
+1、
+sudo apt-get install ntfs-3g
+直接安装ntfsundelete是不行的，它被包含于ntfs-3g中，也包含于ntfsprogs(源中已弃用此包)
+
+2、
+sudo ntfsundelete /dev/sda3 -f -t 3m | grep 实习记 | awk '{print $1}' > ntfsundelete.txt
+获取所有要恢复的文件的inode值，然后使用vi编辑使inode组成"881,2341,234,..."文本。
+3m表示3个月以内生成并删除的，而不3个月内删除的意思。
+
+3、
+sudo ntfsundelete /dev/sda3 -d /home/wilson/tmp/ -u -i 881,2341,234,....
+恢复inode为881,2341,234等的文件。
+
+5、
+cd /home/wilson/tmp
+chown wilson:wilson *
+chmod a+r *
+for fn in *.txt; do sed -i 's/\x00//g' $fn; done;
+恢复后文件属主为root，权限为600, 需修复。
+恢复后的文件一般末尾有多余的\x00，使用sed也可以替换，一开始没想到。
+
+
+6、
+#enjoy it
+恢复文件位置
+
+
+参考
+［教学］在Ubuntu中恢复NTFS分区中被ubuntu误删除的文件（windows软件无法恢复的ubuntu中能恢复！
+http://forum.ubuntu.org.cn/viewtopic.php?t=158497
+
+Linux下恢复ntfs格式的盘上的误删文件
+http://nyc1991.blog.51cto.com/6424159/1216592
+
+Linux文件误删除恢复操作
+http://jingyan.baidu.com/article/2f9b480d6c2bcd41cb6cc223.html
+
+使用 Linux 文件恢复工具
+http://www.ibm.com/developerworks/cn/linux/1312_caoyq_linuxrestore/
+
+在Linux下使用vim配合xxd查看并编辑二进制文件
+http://www.cnblogs.com/killkill/archive/2010/06/23/1763785.html
+
+sed 可以修改二进制文件？
+http://www.zhihu.com/question/19703679
+

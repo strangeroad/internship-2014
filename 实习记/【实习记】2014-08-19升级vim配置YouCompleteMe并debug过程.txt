@@ -1,0 +1,94 @@
+【实习记】2014-08-19升级vim配置YouCompleteMe并debug的过程+qtcreator有语言包没法换语言
+
+做了个小项目，有空闲可以做点事了。
+
+偶然查资料看见YouCompleteMe的鼎鼎大名。
+
+演示demo
+<img src="http://i.imgur.com/0OP4ood.gif" alt="YouCompleteMe GIF demo">
+
+vim中的杀手级插件: YouCompleteMe 
+http://zuyunfei.com/2013/05/16/killer-plugin-of-vim-youcompleteme/
+
+vim中的五星级软件
+http://www.huangwei.me/wiki/vim_plugin_list.html
+
+YouCompleteMe – 神器在手，代码无忧！
+http://www.yycmmc.com/?p=53
+
+Vim自动补全神器–YouCompleteMe
+http://blog.marchtea.com/archives/161#comment-8567
+
+昨天晚上开始google搜索YouCompleteMe资料，搜出好多独立博客，越发认为它是好东西。
+先是根据上面其中一篇vundle安装了，并在该git目录下./install.sh了。发现没有cpp的补全，虽然后来发现python的也非常不错。
+
+官网上看到原因，从新编译一遍：
+cd ~/.vim/bundle/YouCompleteMe
+./install.sh --clang-completer
+
+以tencent-train这个最近的C++项目做实验。
+把官网的配置文件.ycm_extra.conf.py复制到项目根目录下
+发现还是不行！
+
+搜各种资料，发现:YcmDiags可以检查。
+
+显示：<iostream>中的38行#incldue <bits/c++config.h>找不到文件。
+
+又是各种搜：
+http://www.cnblogs.com/csuftzzk/p/3435710.html 这里说的是方法之一，但不能推荐。
+狠下心来仔细读英文
+g++ 4.6 issue no <bits/c++config.h> file as required by the header cstring
+http://stackoverflow.com/questions/9201521/g-4-6-issue-no-bits-cconfig-h-file-as-required-by-the-header-cstring
+
+答案：
+
+The file bits/c++config.h is the platform specific include relative to the current compiler, so it is hidden in another directory, searched by default by g++, but not by clang++, as it seems.
+
+In my machine, running locate c++config.h gives the following (relevant) files:
+
+/usr/include/c++/4.6/i686-linux-gnu/64/bits/c++config.h
+/usr/include/c++/4.6/i686-linux-gnu/bits/c++config.h
+
+The first one is for 64-bits and the second one for 32-bits.
+
+So just add -I/usr/include/c++/4.6/i686-linux-gnu or -I/usr/include/c++/4.6/i686-linux-gnu/64 or whatever you need for your platform.
+
+g++默认自动搜索，而clang并非gcc系，所以找不到。
+
+离成功很近了！
+但是我修改.ycm_extra.conf.py时一开始
+只加了
+'/usr/include/i386-linux-gnu/c++/4.8',
+其实应该加
+'I',
+'/usr/include/i386-linux-gnu/c++/4.8',
+
+测试成功，乌乎！这个问题花了我一晚上加4个小时啊！
+
+总结：
+YouComplete提示<iostream>没找到bits/c++config.h错误解决方法：
+第一步：
+wilson@ubun:~$ locate bits/c++config.h
+/home/wilson/workplace/openwrt-router/OpenWrt-SDK-brcm63xx-for-Linux-i686-gcc-4.3.3+cs_uClibc-0.9.30.1/staging_dir/toolchain-mips_gcc-4.3.3+cs_uClibc-0.9.30.1/usr/mips-openwrt-linux-uclibc/include/c++/4.3.3/mips-openwrt-linux-uclibc/bits/c++config.h
+/usr/include/i386-linux-gnu/c++/4.8/bits/c++config.h
+第二步：
+修改.ycm_extra_conf.py，增加两行。
+'-I',
+'/usr/include/i386-linux-gnu/c++/4.8',
+
+
+推广一个我见过最好的.vimrc:
+http://www.rover12421.com/2014/03/04/vim-configuration-record.html
+
+
+
+qtcreator有语言包没法换语言
+
+试用qtcreator，安装过程心累。
+apt方式很方便，但没法换语言， /usr/share/qtcreator/translations/ 目录也有qtcreator_zh_CN.qm 啊！
+看见
+http://forum.ubuntu.org.cn/viewtopic.php?f=162&t=299769&start=0
+http://www.ubuntukylin.com/ukylin/forum.php?mod=viewthread&tid=1328
+有了自己思路：
+与qtcreator windows版本的语言包必定通用吧，不可能开发两套，于是安装win7版的后拿过来用果然可以。
+这种思路很重要！！！

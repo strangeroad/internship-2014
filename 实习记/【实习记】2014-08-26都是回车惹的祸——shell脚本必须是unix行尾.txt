@@ -1,0 +1,26 @@
+【实习记】2014-08-26都是回车惹的祸——shell脚本必须是unix行尾
+
+事情由起：
+svn的url在excel里，我复制到txt文本下，vi做些文本处理，只提取了url，保存为url.txt。
+再用vi处理url.txt，加上svn checkout等词，变成可以运行的svn.sh。每一行都是
+svn checkout .../proj_name/trunk  proj_name/trunk
+......
+
+触发动作：
+bash svn.sh
+shell回显一切正常，似乎没有问题。
+
+有什么问题呢？问题就在与我windows下的'\r'（回车）一直带到svn.sh里了，linux下建的目录都是"trunk\r"。
+
+当时不是这样发现的，最先我用rsync同步到windows虚拟机用ide打开目录后，添加文件，显示trunk?目录，但双击不能进去。
+出现这个问题是source insight， 而code::blocks没有问题。
+
+之前也奇怪，为什么
+while read line; do echo "mv $fn ${fn%?}"; done < name.txt
+显示怪异，现在知道了，$fn带有回车见，输出坐标返回第一列继续输出，所以出现怪异的文章被覆盖异常。
+如果最后一个是其他字符，就可一那样去纠正。
+for fn in $(find . -name trunk?); do mv $fn ${fn%?}; done;
+
+最后只能删除，然后把svn.sh变成unix行尾，再执行bash svn.sh！
+
+bash确实做得不够好，处理回车键时显得笨。

@@ -1,0 +1,36 @@
+【实习记】2014-09-13看《Unix网络编程》+折腾qtcreator中文输入
+
+
+查阅资料时有看见了这几个难点。再次尝试攻克。
+
+上午再看一遍后终于有点清晰了。确实书读百遍，其意自现。
+
+TIME_WAIT就是为了保证全双工的TCP链接中断的4个过程任意的出错，出现于主动关闭TCP端发出最后一个ACK后的状态。
+一般是2倍的数据包最长网络消逝时间，防止端口被当作之前TCP链接的替身而起占位作用的。
+
+select
+
+int select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, const struct timeval *timeout); 
+第一个参数，仅查前maxfdp1个，仅为提高效率。
+fd_set的是否就绪用位表示，每次调用后要重设置关心的位。
+timeval最少是微秒
+
+pselect
+
+int pselect(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, const struct timespec *timeout, const sigset_t *sigmask); 
+
+新结构的该成员tv_nsec指定纳秒数，而旧结构的该成员tv_usec指定微秒数。
+pselect函数增加了第六个参数：一个指向信号掩码的指针。该参数允许程序先禁止递交某些信号，再测试由这些当前被禁止的信号处理函数设置的全局变量，然后调用pselect，告诉它重新设置信号掩码。
+
+
+
+
+epoll是poll的变体，它能够支持一个进程打开大数目的socket文件描述符，并且IO不会随FD数目的增加而线性下降。
+
+epoll比poll等快是因为用空间换了时间。
+
+
+
+下午发现qtcreator中文输入是失效的，折腾了一个下午，也没有搞定！
+非常鄙视qt这种把外国人排除考虑，不负责的态度。
+qtcreator的资料真的很少，至少中文的太少。

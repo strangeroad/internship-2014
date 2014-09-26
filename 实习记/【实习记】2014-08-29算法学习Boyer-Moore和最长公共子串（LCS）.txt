@@ -1,0 +1,108 @@
+【实习记】2014-08-29算法学习Boyer-Moore和最长公共子串（LCS）
+
+昨天的问题
+方案一：寻找hash函数，可行性极低。
+方案二：载入内存，维护成一个守护进程的服务。难度比较大。
+方案三：使用前5位来索引，由前3位增至前5位唯一性，理论上是分拆记录扩大100倍，但可以就地利用mysql，最易行。
+方案四：使用方案三，但增加一个表以减少冗余，但代价新开一个表，并且每次查询都select join两个表。
+
+
+
+
+研究了 求最长公共子串问题，顺便研究了字符串匹配
+
+字符串匹配的Boyer-Moore算法
+http://www.ruanyifeng.com/blog/2013/05/boyer-moore_string_search_algorithm.html
+字符串匹配的KMP算法
+http://www.ruanyifeng.com/blog/2013/05/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm.html
+
+动态规划算法之：最长公共子序列 & 最长公共子串（LCS）
+http://my.oschina.net/leejun2005/blog/117167
+
+最长公共子串
+
+其实这是一个序贯决策问题，可以用动态规划来求解。我们采用一个二维矩阵来记录中间的结果。这个二维矩阵怎么构造呢？直接举个例子吧："bab"和"caba"(当然我们现在一眼就可以看出来最长公共子串是"ba"或"ab")
+
+　　 b　　a　　b
+
+c　　0　　0　　0
+
+a　　0　　1　　0
+
+b　　1　　0　　1
+
+a　　0　　1　　0
+
+我们看矩阵的斜对角线最长的那个就能找出最长公共子串。
+
+不过在二维矩阵上找最长的由1组成的斜对角线也是件麻烦费时的事，下面改进：当要在矩阵是填1时让它等于其左上角元素加1。
+
+　　 b　　a　　b
+
+c　　0　　0　　0
+
+a　　0　　1　　0
+
+b　　1　　0　　2
+
+a　　0　　2　　0
+
+这样矩阵中的最大元素就是 最长公共子串的长度。
+
+在构造这个二维矩阵的过程中由于得出矩阵的某一行后其上一行就没用了，所以实际上在程序中可以用一维数组来代替这个矩阵。 
+
+
+
+根据以上算法
+使用C语言实践了一下。
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+int comfix(const char* stra, const char* strb);
+int main(void){
+    const char
+        *stra = "hello world",
+        *strb = "malloc";
+    printf("%s,%s: %d\n", stra, strb, comfix(stra, strb));
+    return 0;
+}
+
+int comfix(const char* stra, const char* strb){
+    /* 
+     * 变量第一字符
+     * c:char*, l:len
+     * 变量第二字符
+     * s:small, l:large
+     */
+    const char 
+        *cs  = stra,
+        *cl  = strb;
+    int ret = 0,
+        la  = strlen(stra),
+        lb  = strlen(strb),
+        ls  = la,
+        ll  = lb;
+    /* 如果不对，就调换呗 */
+    if (lb<la)
+        cs = strb, ls = lb, cl = stra, ll = la;
+    /* 矩阵，只保存矩阵的一行即可动态之 */
+    int *pint = (int*)malloc((ls+1)*4);
+    memset(pint ,0 , (ls+1)*4);
+    int i, j;
+    for (i=0; i<ll; i++){
+        /* 生成下一行，同时上一行内容被回收 */
+       for (j=ls; j>ret; j--)
+           if (cl[i]==cs[j])
+               pint[j] = pint[j-1]+1;
+       /* 如果有更大就更新ret */
+       for (j=ls; j>ret; j--)
+           if (pint[j]>ret)
+               ret = pint[j];
+    }
+    return ret;
+}
+
+
+这种算法非常巧妙地化繁为简，有时换一个思路，就会扩然开朗！
+比较喜欢这种锻炼。

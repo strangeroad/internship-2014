@@ -1,0 +1,22 @@
+中午12点半到公司加班
+
+看见文章博客并评论了：
+
+《c++排序函数详解》
+http://www.cnblogs.com/A-Song/archive/2012/02/02/2336337.html
+
+》》》》》》》》》》》》》》
+你好，感谢质量好文章！
+函数对象写得很好。
+有2点建议：
+1、最好比较子中：升序用<= 降序用>= 。作用是防止常量序列时交换次数过多。
+
+2、接下来使用 sort(begin,end,compare(ASC)实现升序，sort(begin,end,compare(DESC)实现降序。
+这句少括号了。
+《《《《《《《《《《《《《《
+
+《STL排序算法》
+http://www.cnblogs.com/hxsyl/archive/2012/09/13/2683095.html
+
+C++ 之高效使用STL(排序算法的选择 )
+http://blog.csdn.net/zhoukuo1981/article/details/3452205

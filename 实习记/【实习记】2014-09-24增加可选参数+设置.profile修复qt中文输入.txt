@@ -1,0 +1,23 @@
+【实习记】2014-09-24增加可选参数+设置.profile修复qt中文输入
+
+上午发现接口不够用，和组里几个人沟通后扩展了一个参数，表示地区
+
+要做的是把比较函数改好就可以了，改动不大，一两次就成功了。
+
+继续完善了一下接口，然后到中午了。
+
+
+
+下午写了篇项目总结
+
+再次向qt中文输入挑战，终于成功。
+
+~/.profile是xstart图形界面启动初始化的文件。
+加入
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS="@im=fcitx"
+重启后qtcreator中文输入成功了，cheat！
+
+
+

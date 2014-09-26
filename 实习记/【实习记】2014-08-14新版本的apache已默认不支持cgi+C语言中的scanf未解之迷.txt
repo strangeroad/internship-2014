@@ -1,0 +1,66 @@
+【实习记】2014-08-14新版本的apache已默认不支持cgi+C语言中的scanf未解之迷
+
+上午调试txproj_sever.c的另一半。
+
+中午发现，还要接口list，作用是select然后返回订单内容。
+
+下午测试login模块，准备cgicc实际开发，看了下cgicc源码，因为源码不多。
+
+
+总结1：
+ubuntu14.04上的apache2.4.7默认没有cgi模块，而ubuntu10.04是的apache2.2.14默认是有的。
+
+起因：每次都用ubuntu14.04上的VBox里运行的ubuntu10.04上的apache2，感觉略麻烦，于是直接在ubuntu14.04上装个apache2。
+
+发现/cgi-bin/里的cgi总是404，反复确认配置目录没错。
+
+怀疑权限问题（但一般会是5XX而不是404），最后无果。
+
+搜索多次，资料不多，最后找到线索和答案，就是默认不支持了，对于开源软件版本差异巨大问题已见惯不怪，诶，官网没有特别说明。
+
+解决方法：《编译支持cgi的apache》http://www.icycandy.com/blog/compile-cgi-support-for-apache
+引用：“在configure时加一个选项–enable-cgi来打开apache的cgi支持”
+
+我打算先用着ubuntu10.04。
+
+
+晚上以为顺利：谁知又有阻碍。
+
+总结2：
+C语言中的scanf未解之迷：最后一个赋值的变量无缘无故多了个分割符。
+
+#include <stdio.h>
+
+int main(int argc, char* argv[]){
+    /*  输出如下其中a,1,b,c是输入
+     *  login,1,rich,rich,
+     *  login;1;rich;rich;
+     *  login#1#rich#rich#
+     *  a,1,b,c
+     *  login,1,rich#rich,
+     */
+    int type=0;
+    char name[32]="\0", password[32]="\0";
+
+    sscanf("login,1,rich,rich", "login,%d,%s,%s", &type, name, password);
+    printf("login,%d,%s,%s\n", type, name, password);
+    /* login,1,rich,rich, */
+
+    sscanf( "login;1;rich;rich", "login;%d;%s;%s", &type, name, password);
+    printf("login;%d;%s;%s\n", type, name, password);
+    /* login;1;rich;rich; */
+
+    sscanf( "login#1#rich#rich", "login#%d#%s#%s", &type, name, password);
+    printf("login#%d#%s#%s\n", type, name, password);
+    /* login#1#rich#rich# */
+
+    scanf("login,%d,%s,%s", &type, name, password);
+    printf("login,%d,%s,%s\n", type, name, password);
+    /* 末尾总是多一个分割符 */
+    return 0;
+}
+
+许久后才想明白，%s会读取字符，只认空格，制表符做分割；于是%s#%s中的第一个%s把rich#rich读完了！
+
+ 
+可是输出的最后一行也是很恐怖的错误！

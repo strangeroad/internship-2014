@@ -1,0 +1,132 @@
+【实习记】2014-09-01从复杂到简单：一行命令区间查重+长整型在awk中的bug
+
+9月1号，导出sql文件后，想到了awk，但很复杂。想到了用sed前期处理+python排序比较的区间查重法。编写加调试用了约3小时。
+
+9月2号，编写C代码的sql语句过程中，发现排序可以交mysql，于是，又使用了半个多小时，学习并写出了一句命令行区间查重。
+
+所以，方法不止一种，经验多了，才能快速找到最正确最快的方向。
+
+
+重点记录第二种方法，此时是9月3号早上了。
+一行命令查重：
+$ mysql -upublic -ppublic ia_gcms_2014 -e "select Fgcms_product_id, Fissuer_acc_range_low, Fissuer_acc_range_high from t_IP0040T1 order by Fgcms_product_id, Fissuer_acc_range_low" | awk 'NR==1{print};NR>1{if(id==$1 && high>$2) {print ">>> two"; print pre; print;};pre=$0; id=$1; low=$2; high=$3;}'
+输出：
+Fgcms_product_id	Fissuer_acc_range_low	Fissuer_acc_range_high
+>>> two
+CIR	5215703100000000000	5215704099999999999
+CIR	5215703600000000000	5215704099999999999
+>>> two
+MCW	5377950000000000000	5377959999999999999
+MCW	5377950000500000000	5377950000599999999
+>>> two
+MPL	5220200000000000000	5220209999999999999
+MPL	5220200000300000000	5220200000399999999
+>>> two
+MRG	5175900000000000000	5175909999999999999
+MRG	5175900000200000000	5175900000599999999
+>>> two
+MRG	5215703100000000000	5215704099999999999
+MRG	5215703600000000000	5215704099999999999
+
+注意：上面只能是high>$2， 如果high>=$2不行，实践得知，这是是awk对长整支持不足所致。
+$ echo "3560249999999999999 3560250000000000000" | awk '$1<$2{print "true"}' #
+$ echo "3560249999999999999 3560250000000000010" | awk '$1<$2{print "true"}' #
+$ echo "3560249999999999999 3560250000000000100" | awk '$1<$2{print "true"}' #
+$ echo "3560249999999999999 3560250000000001000" | awk '$1<$2{print "true"}' # true
+
+
+
+
+记录到find_cross.sh脚本以便使用
+
+#!/usr/bin/env bash
+#coding: utf-8
+
+# filename:     find_cross.sh
+# description:  数据库区间查重
+# note:         Fgcms_product_id, Fissuer_acc_range_low复合唯一，排序由mysql做好，awk只要比较前后两行即可。
+
+HOST=localhost
+PORT=3306
+USER=public
+PASSWORD=public
+DATABASE=ia_gcms_2014
+# 来源表，表名要足够唯一，保证表名字不会被其他词命中，不然会错。
+TABLE_SRC=t_IP0040T1
+mysql -h${HOST} -P${PORT} -u${USER} -p${PASSWORD} ${DATABASE} \
+    -e "select Fgcms_product_id, Fissuer_acc_range_low, Fissuer_acc_range_high \
+        from ${TABLE_SRC} \
+        order by Fgcms_product_id, Fissuer_acc_range_low" \
+    | awk 'NR==1{print}; \
+        NR>1{\
+            if(id==$1 && high>$2) \
+                {print ">>> two";print pre; print;} \
+            pre=$0; id=$1; low=$2; high=$3; \
+        }'
+
+
+
+
+
+第一种方法现在看来很笨重，导出数据表到sql文件，再使用sed+python做文本处理。
+
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+
+# 使用：
+# mysqldump -upublic -ppublic ia_gcms_2014 t_IP0040T1 > ia_gcms_2014_t_IP0040T1.sql
+# sed '/INSERT INTO.*VALUES.*;$/{s/(/\n(/g}' ia_gcms_2014_t_IP0040T1.sql ia_gcms_2014_t_IP0040T1_sed.sql
+# python find_cross.py ia_gcms_2014_t_IP0040T1_sed.sql
+
+'''
+filename:       find_cross.py
+description:    找出区间交叉的记录
+'''
+import os, sys
+from operator import itemgetter
+
+def find_across(filename):
+    '''
+    寻交叉区间
+    '''
+    sql_file = open(filename, 'r')
+    # 列表解析，一句抵10句      # with '\n'
+    tuple_rows = [ eval(line[:-2]) for line in sql_file.readlines() 
+            if line[0]=='(' and line[-3]==')' and line[-2] in (',',';') ]   # line[-1]=='\n' 
+
+    tuple_rows.sort(key=lambda x:x[4])      # key=itemgetter(4)
+    # 不用变成int了，等长就直接比字符串
+    cmper = lambda a,b:\
+                -1 if a[4]<b[4] else \
+                1 if a[4]>b[4] else \
+                -1 if a[5]<b[2] else \
+                1 if a[2]>b[5] else \
+                0
+    tuple_rows.sort(cmper)
+
+    # print tuple_rows
+
+    begin_end = 0
+    for i in range(len(tuple_rows)-1):
+        if cmper(tuple_rows[i], tuple_rows[i+1])==0:
+            if begin_end == 0:
+                begin_end = 1
+                print "============== begin =============="
+            # if tuple_rows[i][4]==tuple_rows[i][4]:   # 多余
+            print tuple_rows[i]
+        else:
+            if begin_end == 1:
+                print tuple_rows[i]
+                # print "==============  end  =============="
+                begin_end = 0
+    if begin_end == 1:
+        print tuple_rows[-1]
+        # print "==============  end  =============="
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print "<py> <filename>"
+        exit(0)
+    find_across(sys.argv[1])
+
+

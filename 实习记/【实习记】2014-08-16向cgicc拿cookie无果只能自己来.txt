@@ -1,0 +1,121 @@
+【实习记】2014-08-16向cgicc拿cookie无果只能自己来
+
+功能：
+登录时检验从数据库取出的帐号密码，生成token放到数据库中，最后设置cookie实现登录。
+
+在操作cookie过程中cgicc方面有太重的stl感，具体来说，太抽象了。
+
+源码有关demo文件夹有官方示例：
+
+    const_cookie_iterator iter;
+    for(iter = env.getCookieList().begin(); 
+	iter != env.getCookieList().end(); 
+	++iter) {
+      cout << tr().set("class","data") << td(iter->getName()) 
+	   << td(iter->getValue()) << tr() << endl;
+    }
+    cout << table() << cgicc::div() << endl;
+
+这看起来玄乎的用法不是关键问题，关键是没有根据cookie-name拿cookie-value的函数！
+要知道post数据取key-value都可以了，cookie却没有。
+
+于是自己尝试封装一下CgiEnv.h
+
+#ifndef _CGIENV_H
+#define _CGIENV_H_ 1
+
+#include <algorithm>
+#include "cgicc/CgiEnvironment.h"
+  
+//! A vector of HTTPCookie objects
+typedef std::vector<cgicc::HTTPCookie>::iterator 	cookie_iterator;
+//! A vector of const HTTPCookie objects
+typedef std::vector<cgicc::HTTPCookie>::const_iterator const_cookie_iterator;
+
+class CK_nameCompare : public std::unary_function<cgicc::HTTPCookie, bool>
+{
+public:
+  
+    inline explicit CK_nameCompare(const std::string& name)
+      : fName(name) {}
+    
+    inline bool operator() (const argument_type& c) 	const
+    { return c.getName()==fName;}
+  
+private:
+    std::string fName;
+};
+
+class CgiEnv: public cgicc::CgiEnvironment
+{
+    inline const_cookie_iterator getCookie(std::string& name) 				const
+    {
+        return std::find_if(getCookieList().begin(), getCookieList().end(), CK_nameCompare(name));
+    }
+};
+
+#endif /* #define _CGIENV_H_ 1 */
+
+CgiEnv.cpp为空。
+命令：g++ -c CgiEnv.h编译通过的。
+
+
+本以为可以，实现时却
+CgiEnvironment env = cgi.getEnvironment();
+
+这表示没那么简单，除非基于cgicc库个类都封装上层子类，即使用cgicc库写自己的库才行。工程有点大，果断绕路。
+
+
+纵然C++的方式失败了，C的方式却简单易行：
+
+
+// 函数对象
+class CK_nameCompare : public std::unary_function<cgicc::HTTPCookie, bool>
+{
+public:
+  
+    inline explicit CK_nameCompare(const std::string& name)
+      : fName(name) {}
+    
+    inline bool operator() (const argument_type& c) 	const
+    { return c.getName()==fName;}
+  
+private:
+    std::string fName;
+};
+
+const string& getCookie(Cgicc &cgi, const string &name){
+    const CgiEnvironment& env = cgi.getEnvironment();
+    std::vector<cgicc::HTTPCookie>::const_iterator
+        begin   = env.getCookieList().begin(),
+        end     = env.getCookieList().end(),
+        findit;
+    findit = std::find_if(begin, end, CK_nameCompare(name));
+    if (findit == end)
+        return "";
+    return findit->getValue();
+}
+
+int if_login(Cgicc &cgi){
+    char buf_send[MAXLINE]="\0", buf_recv[MAXLINE]="\0";
+    if (cgi.getEnvironment().getCookies().empty())
+        return 0;
+    string  type = getCookie(cgi, "type"),
+            name = getCookie(cgi, "name"),
+            token= getCookie(cgi, "token");
+    if (type.empty() || name.empty() || token.empty())
+        return 0;
+    string  cmd  = "token|" + type + '|' + name + '|' + token;
+    send_reci(cmd.c_str(), cmd.size()+10, buf_recv, MAXLINE);
+    int err = -1;
+    char note[32] = "\0";
+    sscanf(buf_recv, "error:%d,note:%s", &err, note);
+    return err == 0;
+}
+
+上面的都已经编译运行测试过的代码。
+
+感悟：
+1、cgicc这个库不够好用，cookie操作太惨白。某天也许我把它封装成更好用的库。
+2、C++要用好，必须复杂的用，抽象的用，比如这次必须整库提升。而C是最灵活的语言，改变增加小功能，代码小改动时考虑它。
+

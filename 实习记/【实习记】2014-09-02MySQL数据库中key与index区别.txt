@@ -1,0 +1,49 @@
+【实习记】2014-09-02MySQL数据库中key与index区别
+
+做数据库优化时，使用sql语句调整数据库，在此记录一下。
+
+好博客，好文章
+
+《mysql常用SQL语句》
+http://www.cnblogs.com/jevo/p/3257222.html
+
+《MySQL 主键与索引的联系与区别分析》
+http://www.jb51.net/article/34037.htm
+
+1. 主键一定是唯一性索引，唯一性索引并不一定就是主键。
+
+2. 一个表中可以有多个唯一性索引，但只能有一个主键。
+
+3. 主键列不允许空值，而唯一性索引列允许空值。
+
+4. 索引可以提高查询的速度。 
+
+在MySQL中，INDEX和KEY的概念是一样的。
+Key即键值，是关系模型理论中的一部份，用于数据完整性检否与唯一性约束等。而Index则处于实现层面，比如可以对表个的任意列建立索引
+
+
+
+修改数据库表结构的语句：废除原主键，建新主键，删除前缀行。
+
+lock tables t_IP0040T1 write;
+
+alter table t_IP0040T1 drop primary key;
+
+alter table t_IP0040T1 drop column Fissuer_acc_range_prefix;
+
+# primary need not
+alter table t_IP0040T1 add Fid bigint primary key auto_increment;
+
+alter table t_IP0040T1 add unique key (Fissuer_acc_range_low, Fgcms_product_id);
+
+unlock tables;
+
+
+记录：
+alter table t_IP0040T1 add Fid bigint primary key auto_increment;   # 可以直接增加自增主键
+# 等于以下两句，primary可省略是为了兼容其他数据库。
+alter table t_IP0040T1 add Fid bigint not null;                     # 此时都为0
+alter table t_IP0040T1 change Fid Fid bigint key auto_increment;    # 现在是1、2、3、4……
+# 如果 key 是 index ，则出错。此处key不等于index。
+
+

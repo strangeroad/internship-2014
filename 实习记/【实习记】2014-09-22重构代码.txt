@@ -1,0 +1,63 @@
+【实习记】2014-09-22重构代码
+
+review代码
+
+发现在checkParams()中使用sscanf为long long unsigned类成员赋值，会有问题，赋值不了。
+
+execute()中使用局部变量，sscanf赋值却是成功的。
+
+当下怀疑是C++本身的问题。
+
+但第二天验证想法是错误的。
+下面代码运行良好
+
+/*
+ * =====================================================================================
+ *
+ *       Filename:  longlongunsigned.cpp
+ *
+ *    Description:  测试long long unsigned作为类成员，sscanf赋值是否有问题。果然是没有问题的
+ *
+ *        Version:  1.0
+ *        Created:  2014/9/23 16:19:45
+ *       Revision:  none
+ *       Compiler:  g++
+ *
+ *         Author:  wilsonwuwu (wws),
+ *   Organization:  tencent
+ *
+ * =====================================================================================
+ */
+#include <iostream>
+#include <string>
+
+// using std:string;
+using namespace std;
+
+class LLU
+{
+public:
+    LLU(string strnum):num(0)
+    {
+        this->strnum = strnum;
+    }
+    void test_sscanf()
+    {
+        sscanf(strnum.c_str(), "%llu", &num);
+    }
+    void print()
+    {
+        std::cout << "\"" <<  strnum << "\" =>> " << num << std::endl;
+    }
+private:
+    long long unsigned num;
+    string strnum;
+};
+
+int main(int argc, char* argv[])
+{
+    LLU Test = LLU("8888888888888888888");
+    Test.test_sscanf();
+    Test.print();
+    return 0;
+}

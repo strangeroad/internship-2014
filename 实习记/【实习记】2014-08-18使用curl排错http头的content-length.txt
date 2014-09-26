@@ -1,0 +1,26 @@
+【实习记】2014-08-18使用curl排错http头的content-length
+
+总结一，用curl排错
+Content-Length设置错误，误导了客户端。
+
+访问/cgi-bin/txproj_list时，firebug显示总是不多不少15秒，调试其他问题时郁闷。 firebug没有具体延时15秒的提示，一直百思不得其解。 直到我使用curl
+
+wilson@ubun:~$ curl http://192.168.56.101:8080/cgi-bin/txproj_list -b "name=rich; token=1333500450rich; id=1000003; type=2"
+{"error":0,"type":2, "len":0, "data":[{"id":1000000002, "seller":"rich", "amount":13300, "refund":300, "create_time":"2014-07-28 09:00:00", "status":3},{"id":1000000005, "seller":"rich", "amount":3500, "refund":1000, "create_time":"2014-08-08 19:01:00", "status":3},{"id":1000000010, "seller":"rich", "amount":3700, "refund":0, "create_time":"2014-08-12 09:20:00", "status":2}]}
+curl: (18) transfer closed with 30 bytes remaining to read
+最后一行直接告诉我原因，会多一个工具是好的。
+
+
+设置回复真实长度后成功debug，测试去掉其实也是可以的。
+排错后代码：
+            // 有没有长度都行的
+            // 有但不对会误导浏览器，使执行时间长达15秒！！！！
+            // cout << "Content-Length:" << strlen(buf_recv)+2 << "\r\n";
+            cout << "Content-Type:application/json" << "\r\n\r\n";
+            // 格式必须json正确，不如$.get[JSON]回调函数不执行，大坑！！！
+            cout << buf_recv << "\r\n";
+
+
+
+
+

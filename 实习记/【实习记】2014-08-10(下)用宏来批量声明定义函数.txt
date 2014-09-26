@@ -1,0 +1,218 @@
+(冒泡，选择，插入，希尔，快速，归并，堆排)
+周末加班学习C++，打算用C++写七大经典排序代码。
+
+之前写好的C实现代码debug后运行良好。
+之前的mysortlib.c中函数声明如下，接口完全是一样的。
+void _bubsort(int arr[], int len);
+void _bubsort_(int arr[], int len);
+
+void _isort(int arr[], int len);
+void _isort_(int arr[], int len);
+
+void _ssort(int arr[], int len);
+void _ssort_(int arr[], int len);
+
+void _selsort(int arr[], int len);
+
+void _msort(int arr[], int len);
+
+void _qsort_easy(int arr[], int len);
+void _qsort(int arr[], int len);
+
+void _hsort(int arr[], int len);
+
+
+我因此设计的C++接口是void sort_func(vector<int> &arr, int len);
+考虑到：这样调用也合理void sort_func(vector<int> &arr);
+先试试用默认参数形式void sort_func(vector<int> &arr, int len=arr.size());错误提示：arr not in the context。
+那么就用函数重载，函数名一样，参数不同，每一个都定义两个。
+
+于是想要换个方法。想到宏。
+
+测试是成功的，可是可读性有一定损失。
+首先，建立一个测试文件测试可行性。
+=====================================================================
+= 内容如下
+=====================================================================
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+/* 宏定义适配器(仅声明) */
+#define MACRO_VECTOR_INT_DECLARE(func_name_in_macro) void func_name_in_macro(std::vector<int> &arr, int len)
+/* 宏定义适配器(仅声明) */
+#define MACRO_VECTOR_DECLARE(func_name_in_macro) void func_name_in_macro(std::vector<int> &arr)
+/* 宏定义适配器 */
+#define MACRO_VECTOR_IMPLEMENT(func_name_in_macro) MACRO_VECTOR_DECLARE(func_name_in_macro){func_name_in_macro(arr, arr.size());}
+
+using namespace std;
+
+/* 一开始想用这种方式实现批量声明，定义函数，失败。
+ * arr not in the context !
+void _bubsort(vector<int> &arr, int len=arr.size()){
+    arr[0] = len;
+    cout << len << endl;
+}
+ */
+MACRO_VECTOR_INT_DECLARE(_bubsort); // 声明函数 _bubsort(std::vector<int> &arr, int len);
+
+MACRO_VECTOR_INT_DECLARE(_bubsort){ // 函数定义
+    cout << "this function was created by macro with an argument funciton name! and this function use an argument len:" << len << endl;
+}
+MACRO_VECTOR_DECLARE(_bubsort);      // 补充一个适配器 _bubsort(std::vector<int> &arr);
+MACRO_VECTOR_IMPLEMENT(_bubsort)    // 补充一个适配器 _bubsort(std::vector<int> &arr){ _bubsort(arr, arr.size()); }
+
+#define sortfunc _bubsort
+
+int print_int(int n){ cout << n << ' ' ; }
+int main(int argc, char* argv[]){
+    vector<int> arr(10);
+    srand(time(0));
+    generate(arr.begin(), arr.end(), rand);
+    for_each(arr.begin(), arr.end(), print_int);
+    cout << endl;
+    sortfunc(arr, 10);
+    cout << "that is diff call" << endl;
+    sortfunc(arr);
+    return 0;
+}
+
+
+编译，运行，调试，最后成功。说明是可行的。
+
+
+然后实际运用，将代码分拆到几个文件。
+
+=====================================================================
+= 声明变成如下
+=====================================================================
+
+#ifndef _MYSORTLIB_H
+#define _MYSORTLIB_H
+
+/* 宏定义适配器(仅声明) */
+#define MACRO_VECTOR_INT_DECLARE(func_name_in_macro) void func_name_in_macro(std::vector<int> &arr, int len)
+/* 宏定义适配器(仅声明) */
+#define MACRO_VECTOR_DECLARE(func_name_in_macro) void func_name_in_macro(std::vector<int> &arr)
+/* 宏定义适配器 */
+#define MACRO_VECTOR_IMPLEMENT(func_name_in_macro) MACRO_VECTOR_DECLARE(func_name_in_macro){func_name_in_macro(arr, arr.size());}
+
+#include <vector>
+
+/* 接口相同，仅函数名不同，故批量定义 */
+
+MACRO_VECTOR_INT_DECLARE(_bubsort);
+MACRO_VECTOR_INT_DECLARE(_bubsort_);
+
+MACRO_VECTOR_INT_DECLARE(_isort);
+MACRO_VECTOR_INT_DECLARE(_isort_);
+
+MACRO_VECTOR_INT_DECLARE(_ssort);
+MACRO_VECTOR_INT_DECLARE(_ssort_);
+
+MACRO_VECTOR_INT_DECLARE(_selsort);
+
+MACRO_VECTOR_INT_DECLARE(_msort);
+
+MACRO_VECTOR_INT_DECLARE(_qsort_easy);
+MACRO_VECTOR_INT_DECLARE(_qsort);
+
+MACRO_VECTOR_INT_DECLARE(_hsort);
+
+/* --------------------------------------
+ */
+
+MACRO_VECTOR_DECLARE(_bubsort);
+MACRO_VECTOR_DECLARE(_bubsort_);
+
+MACRO_VECTOR_DECLARE(_isort);
+MACRO_VECTOR_DECLARE(_isort_);
+
+MACRO_VECTOR_DECLARE(_ssort);
+MACRO_VECTOR_DECLARE(_ssort_);
+
+MACRO_VECTOR_DECLARE(_selsort);
+
+MACRO_VECTOR_DECLARE(_msort);
+
+MACRO_VECTOR_DECLARE(_qsort_easy);
+MACRO_VECTOR_DECLARE(_qsort);
+
+MACRO_VECTOR_DECLARE(_hsort);
+
+#endif /*_MYSORTLIB_H*/
+
+
+
+
+=====================================================================
+= 实现如下：
+=====================================================================
+
+#define swap(a,b) {int tmp_that_must_be_unique=a; a=b; b=tmp_that_must_be_unique;}
+
+/* 适配器批量生产 */
+MACRO_VECTOR_IMPLEMENT(_bubsort);
+MACRO_VECTOR_IMPLEMENT(_bubsort_);
+
+MACRO_VECTOR_IMPLEMENT(_isort);
+MACRO_VECTOR_IMPLEMENT(_isort_);
+
+MACRO_VECTOR_IMPLEMENT(_ssort);
+MACRO_VECTOR_IMPLEMENT(_ssort_);
+
+MACRO_VECTOR_IMPLEMENT(_selsort);
+
+MACRO_VECTOR_IMPLEMENT(_msort);
+
+MACRO_VECTOR_IMPLEMENT(_qsort_easy);
+MACRO_VECTOR_IMPLEMENT(_qsort);
+
+MACRO_VECTOR_IMPLEMENT(_hsort);
+
+
+/* 实际实现者 */
+MACRO_VECTOR_INT_DECLARE(_bubsort){
+    int i=len,j=0;
+    while (i>1) {
+        for (j=0;j<i-1;j++) {
+            if (arr[j]>arr[j+1])
+                swap(arr[j], arr[j+1]);
+        }
+        i--;
+    }
+}
+
+MACRO_VECTOR_INT_DECLARE(_bubsort_){
+}
+
+MACRO_VECTOR_INT_DECLARE(_isort){
+}
+MACRO_VECTOR_INT_DECLARE(_isort_){
+}
+
+MACRO_VECTOR_INT_DECLARE(_ssort){
+}
+MACRO_VECTOR_INT_DECLARE(_ssort_){
+}
+
+MACRO_VECTOR_INT_DECLARE(_selsort){
+}
+
+MACRO_VECTOR_INT_DECLARE(_msort){
+}
+
+MACRO_VECTOR_INT_DECLARE(_qsort_easy){
+}
+MACRO_VECTOR_INT_DECLARE(_qsort){
+}
+
+MACRO_VECTOR_INT_DECLARE(_hsort){
+}
+
+以上代码均已测试通过。
+**最后，现在为止，其实宏还是可以再合并精简的。不过越是合并越是难读。**
+
+
+
