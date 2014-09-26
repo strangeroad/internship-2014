@@ -54,10 +54,10 @@ void token(const char *recv, char *buf, int len);
 /* 命令：login type name password 返回 */
 void login(const char *recv, char *buf, int len);
 /* 命令：pay deal_id buyer_id seller_id amount 返回 */
-void pay(const char *recv, char *buf, int len);     // 不适用
+void pay(const char *recv, char *buf, int len);     /* 不适用 */
 void pay2(const char *recv, char *buf, int len);
 /* 命令：refund dealid buyer seller amount */
-void refund(const char *recv, char *buf, int len);  // 不适用
+void refund(const char *recv, char *buf, int len);  /* 不适用 */
 void refund2(const char *recv, char *buf, int len);
 /* 命令：list type name token */
 void list(const char *recv, char *buf, int len);
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]){
             if (len == 0 || buf_recv[0]=='\0')   break;
 
             /* 不用buf_recv[len] = '\0' 测试显示 自动就有了 */
-            buf_recv[MAXLINE] = '\0'; /* safe */
+            buf_recv[MAXLINE-1] = '\0'; /* safe */
             printf("recv: %s [bytes:%d]\n", buf_recv, len);
             if (0 == strcmp(buf_recv, "exit"))
                 break;
@@ -130,7 +130,7 @@ int main(int argc, char* argv[]){
             middle_handle(buf_recv, buf_send, MAXLINE);
             /* printf("send:%s\n", buf_send); */
 
-            buf_send[MAXLINE] = '\0'; /* safe */
+            buf_send[MAXLINE-1] = '\0'; /* safe */
             if (send(socket_client, buf_send, MAXLINE, 0) < 0)
                 err_handle("send");
         }

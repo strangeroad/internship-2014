@@ -35,14 +35,13 @@ import ycm_core
 # compilation database set (by default, one is not set).
 # CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
 flags = [
-'-Wall',
-'-Wextra',
+# '-Wall',
+# '-Wextra',
 # '-Werror',
-'-Wno-unused',
-'-Wno-unused-parameter',
-'-Wc++98-compat',
-'-Wno-long-long',
-'-Wno-variadic-macros',
+# '-Wno-unused-parameter',
+# '-Wc++98-compat',
+# '-Wno-long-long',
+# '-Wno-variadic-macros',
 # '-fexceptions',
 # '-DNDEBUG',
 # You 100% do NOT need -DUSE_CLANG_COMPLETER in your flags; only the YCM
