@@ -23,7 +23,6 @@
 #include "globalconfig.h"
 
 extern GlobalConfig* gPtrConfig;
-extern CMySQL* gPtrIaMscDb;
 extern CftLog * gPtrAppLog;
 
 QueryCardBinServer::QueryCardBinServer()

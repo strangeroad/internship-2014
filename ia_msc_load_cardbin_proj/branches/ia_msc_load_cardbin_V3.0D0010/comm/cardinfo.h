@@ -3,14 +3,14 @@
  *
  *       filename:  cardinfo.h
  *
- *    Description:  澶勭悊浠庢暟鎹簱璇诲埌鍐呭瓨鍗′俊鎭?
+ *    Description:  卡号区间处理模块，用于ia_msc_cardbin_server和ia_msc_load_cardbin两个svn工程中
  *
  *        Version:  1.0
  *        Created:  2014/9/14 15:18:04
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  wilsonwuwu (wws),
+ *         Author:  wilsonwuwu (582223837@qq.com),
  *   Organization:  tencent 
  *
  * =====================================================================================

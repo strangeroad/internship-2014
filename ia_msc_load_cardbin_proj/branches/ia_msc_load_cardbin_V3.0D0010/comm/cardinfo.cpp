@@ -3,15 +3,15 @@
  *
  *       Filename:  cardinfo.cpp
  *
- *    Description:  
+ *    Description:  卡号区间处理模块，用于ia_msc_cardbin_server和ia_msc_load_cardbin两个svn工程中
  *
  *        Version:  1.0
  *        Created:  2014/9/14 15:34:30
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  wilsonwuwu (wws), 
- *   Organization:  
+ *         Author:  wilsonwuwu (582223837@qq.com),
+ *   Organization:  tencent
  *
  * =====================================================================================
  */
@@ -29,6 +29,7 @@
 
 extern GlobalConfig* gPtrConfig;
 extern CftLog * gPtrAppLog;
+extern CftLog * gPtrSysLog;
 
 
 // 查找卡号用的比较函数
@@ -73,8 +74,11 @@ s_card_info_t* binary_search(unsigned long long tag, s_card_info_t* arr, int len
 
 // 结构体数组排序用的比较函数
 int cmp_struct(const s_card_info_t &larg, const s_card_info_t &rarg){
+    // low, high, country
     if (larg.issuer_acc_range_low != rarg.issuer_acc_range_low)
         return larg.issuer_acc_range_low <= rarg.issuer_acc_range_low;
+    if (larg.issuer_acc_range_high != rarg.issuer_acc_range_high)
+        return larg.issuer_acc_range_high <= rarg.issuer_acc_range_high;
     return larg.country_code_num <= rarg.country_code_num;
 }
 
@@ -211,17 +215,44 @@ int load_shm(CMySQL *pMysql, int shm_key)
     // 增加检测机制，因为包含关系的前后区间会导致bug
     for (i=1; i<iRow; i++) {
         if (pData[i-1].issuer_acc_range_high == pData[i].issuer_acc_range_high
-            && pData[i-1].issuer_acc_range_low == pData[i].issuer_acc_range_low){
-            // 由于是另一个字段与区间下限联合主键，所以有前后区间完全相同情况
+            && pData[i-1].issuer_acc_range_low == pData[i].issuer_acc_range_low){   // 区间完全重叠，不需处理
+
             continue;
-        }else if (pData[i-1].issuer_acc_range_high > pData[i].issuer_acc_range_high){ // 前后连个区间是包含关系
-            gPtrAppLog->debug("Got bad cardrange data: [%llu,%llu] is smaller than [%llu, %llu] -> delete",
-                              pData[i].issuer_acc_range_low, pData[i].issuer_acc_range_high,
-                              pData[i-1].issuer_acc_range_low, pData[i-1].issuer_acc_range_high );
-            // 使用memcpy，将大区间复制一份，以覆盖小区间。好处：快
-            memcpy(pData+i, pData+i-1, sizeof(s_card_info_t));
-        }else if (pData[i-1].issuer_acc_range_high > pData[i].issuer_acc_range_low){ // 前后连个区间是交叉关系
-            gPtrAppLog->debug("Got bad cardrange data: [%llu,%llu] is cross with  [%llu, %llu]",
+
+        }else if (pData[i-1].issuer_acc_range_high > pData[i].issuer_acc_range_high){ // 前后2个区间是包含关系
+
+            // 是否仅区间上下限不同
+            // 仅区间上下限不同情况，用大的覆盖小的区间 不需告警
+            // 若不是，数据冲突了, 需要人工修复->告警或打印错误
+            s_card_info_t tmpcard = {0};
+            memcpy(&tmpcard, pData+i, sizeof(s_card_info_t));
+            tmpcard.issuer_acc_range_low = pData[i-1].issuer_acc_range_low;
+            tmpcard.issuer_acc_range_high = pData[i-1].issuer_acc_range_high;
+            // 排除比较的字段
+            strncpy(tmpcard.effective_time, pData[i-1].effective_time, sizeof(tmpcard.effective_time)-1);
+
+            if (memcmp(&tmpcard, pData+i-1, sizeof(s_card_info_t)) == 0){
+                gPtrAppLog->debug(" [%019llu,%019llu] vs [%019llu, %019llu] : L1<L2<H2<H1 -> delete small one",
+                                  pData[i].issuer_acc_range_low, pData[i].issuer_acc_range_high,
+                                  pData[i-1].issuer_acc_range_low, pData[i-1].issuer_acc_range_high );
+                // 使用memcpy，将大区间复制一份，以覆盖小区间。好处：快
+                memcpy(pData+i, pData+i-1, sizeof(s_card_info_t));
+
+            }else{
+                // 也有可能是这样:
+                // [5,10](其他信息A),[5,10](其他信息B),[5,8](其他信息A),[5,8](其他信息B)
+
+                // 告警, 打印错误的代码写在这里……
+                gPtrAppLog->error(" [%019llu,%019llu] vs [%019llu, %019llu] : L1<L2<H2<H1 -> check if conflict data!",
+                                  pData[i].issuer_acc_range_low, pData[i].issuer_acc_range_high,
+                                  pData[i-1].issuer_acc_range_low, pData[i-1].issuer_acc_range_high );
+                // 使用memcpy，将大区间复制一份，以覆盖小区间。好处：快
+                memcpy(pData+i, pData+i-1, sizeof(s_card_info_t));
+            }
+
+        }else if (pData[i-1].issuer_acc_range_high > pData[i].issuer_acc_range_low){ // 前后2个区间是交叉关系
+
+            gPtrAppLog->debug(" [%019llu,%019llu] vs [%019llu, %019llu] : L1<L2<H1<=H2 -> compatible-ok",
                               pData[i].issuer_acc_range_low, pData[i].issuer_acc_range_high,
                               pData[i-1].issuer_acc_range_low, pData[i-1].issuer_acc_range_high );
         }
@@ -233,7 +264,8 @@ int load_shm(CMySQL *pMysql, int shm_key)
         shmdt(pMem);
 
     return i;
-}
+
+}   // end of load_shm()
 
 // 更新共享内存，保证调用后只有一个key对应共享内存可用
 int reflash_shms(CMySQL *pMysql, int shm_key1, int shm_key2)
